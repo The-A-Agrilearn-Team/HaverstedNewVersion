@@ -1,0 +1,27 @@
+kind = "mobile"
+previewPath = "/"
+title = "AgriLearn - Agricultural Learning Platform"
+version = "1.0.0"
+id = "artifacts/agri-learn"
+router = "expo-domain"
+
+[[integratedSkills]]
+name = "expo"
+version = "1.0.0"
+
+[[services]]
+ensurePreviewReachable = "/status"
+name = "expo"
+paths = [ "/" ]
+localPort = 18509
+
+[services.development]
+run = "pnpm --filter @workspace/agri-learn run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/agri-learn", "run", "build" ]
+run = [ "pnpm", "--filter", "@workspace/agri-learn", "run", "serve" ]
+
+[services.env]
+PORT = "18509"
+BASE_PATH = "/"
