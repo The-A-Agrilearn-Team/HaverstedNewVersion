@@ -91,7 +91,9 @@ export default function EditProfileScreen() {
       Alert.alert("Could not save", error);
     } else {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert("Saved!", "Your profile has been updated successfully.");
+      Alert.alert("Saved!", "Your profile has been updated successfully.", [
+        { text: "OK", onPress: () => router.replace("/(tabs)/profile") },
+      ]);
     }
   };
 
@@ -120,10 +122,10 @@ export default function EditProfileScreen() {
             if (hasChanges) {
               Alert.alert("Discard changes?", "You have unsaved changes.", [
                 { text: "Keep editing", style: "cancel" },
-                { text: "Discard", style: "destructive", onPress: () => router.back() },
+                { text: "Discard", style: "destructive", onPress: () => router.replace("/(tabs)/profile") },
               ]);
             } else {
-              router.back();
+              router.replace("/(tabs)/profile");
             }
           }}
         >
