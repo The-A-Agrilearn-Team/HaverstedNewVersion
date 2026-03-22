@@ -124,9 +124,9 @@ export default function ProfileScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionLabel}>Account</Text>
         <View style={styles.menuGroup}>
-          <MenuRow icon="user" label="Personal Information" />
-          <MenuRow icon="map-pin" label="Location" value={profile?.location ?? "Not set"} />
-          <MenuRow icon="globe" label="Language" value={profile?.language_preference ?? "English"} last />
+          <MenuRow icon="user" label="Personal Information" onPress={() => router.push("/profile/edit")} />
+          <MenuRow icon="map-pin" label="Location" value={profile?.location ?? "Not set"} onPress={() => router.push("/profile/edit")} />
+          <MenuRow icon="globe" label="Language" value={profile?.language_preference ?? "English"} onPress={() => router.push("/profile/edit")} last />
         </View>
       </View>
 

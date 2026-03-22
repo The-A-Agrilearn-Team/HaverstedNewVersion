@@ -22,6 +22,12 @@ interface AuthContextType {
   ) => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  updateProfile: (updates: {
+    full_name?: string;
+    phone?: string;
+    location?: string;
+    language_preference?: string;
+  }) => Promise<{ error?: string }>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -105,9 +111,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (user) await fetchProfile(user.id);
   };
 
+  const updateProfile = async (updates: {
+    full_name?: string;
+    phone?: string;
+    location?: string;
+    language_preference?: string;
+  }) => {
+    if (!user) return { error: "Not signed in" };
+    const { error } = await supabase
+      .from("profiles")
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq("id", user.id);
+    if (error) return { error: error.message };
+    await fetchProfile(user.id);
+    return {};
+  };
+
   return (
     <AuthContext.Provider
-      value={{ session, user, profile, loading, signIn, signUp, signOut, refreshProfile }}
+      value={{ session, user, profile, loading, signIn, signUp, signOut, refreshProfile, updateProfile }}
     >
       {children}
     </AuthContext.Provider>
