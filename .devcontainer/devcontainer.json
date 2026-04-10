@@ -1,0 +1,38 @@
+{
+  "name": "AgriLearn Development",
+  "image": "mcr.microsoft.com/devcontainers/universal:2",
+  
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "msjsdiag.vscode-react-native",
+        "dsznajder.es7-react-js-snippets"
+      ],
+      "settings": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+      }
+    }
+  },
+  
+  "forwardPorts": [8081, 19000, 19001, 19002],
+  
+  "portsAttributes": {
+    "8081": {
+      "label": "Metro Bundler",
+      "onAutoForward": "silent"
+    },
+    "19000": {
+      "label": "Expo",
+      "onAutoForward": "openPreview"
+    }
+  },
+  
+  "postCreateCommand": "npm install && npx expo install expo-blur",
+  
+  "containerEnv": {
+    "EXPO_DEVTOOLS_LISTEN_ADDRESS": "0.0.0.0"
+  }
+}
