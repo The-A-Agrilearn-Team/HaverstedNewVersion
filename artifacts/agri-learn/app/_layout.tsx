@@ -31,6 +31,7 @@ function RootLayoutNav() {
         name="(auth)"
         options={{ presentation: "modal", headerShown: false }}
       />
+      <Stack.Screen name="admin" options={{ headerShown: false }} />
       <Stack.Screen name="module/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="product/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="listing/create" options={{ headerShown: false }} />

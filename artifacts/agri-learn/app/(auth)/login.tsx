@@ -16,7 +16,6 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "@/context/AuthContext";
 import Colors from "@/constants/colors";
-import ADMIN_CONFIG from "@/constants/adminConfig";
 
 const C = Colors.light;
 
@@ -27,7 +26,6 @@ export default function LoginScreen() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [adminLoading, setAdminLoading] = useState(false);
   const [error, setError] = useState("");
 
   const handleLogin = async () => {
@@ -49,21 +47,10 @@ export default function LoginScreen() {
     }
   };
 
-  const handleAdminLogin = async () => {
-    setError("");
-    setAdminLoading(true);
+  const handleAdminLogin = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    const result = await signIn(ADMIN_CONFIG.email, ADMIN_CONFIG.password);
-    setAdminLoading(false);
-    if (result.error) {
-      setError(
-        "Admin account not set up yet. Please follow the setup instructions in the README."
-      );
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-    } else {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      router.dismissAll();
-    }
+    router.dismissAll();
+    router.replace("/admin");
   };
 
   return (
@@ -167,19 +154,12 @@ export default function LoginScreen() {
             <Pressable
               style={({ pressed }) => [
                 styles.adminButton,
-                { opacity: pressed || adminLoading ? 0.85 : 1 },
+                { opacity: pressed ? 0.85 : 1 },
               ]}
               onPress={handleAdminLogin}
-              disabled={adminLoading}
             >
-              {adminLoading ? (
-                <ActivityIndicator color={C.error} />
-              ) : (
-                <>
-                  <Feather name="shield" size={18} color={C.error} />
-                  <Text style={styles.adminButtonText}>Login as Administrator</Text>
-                </>
-              )}
+              <Feather name="shield" size={18} color={C.error} />
+              <Text style={styles.adminButtonText}>Login as Administrator</Text>
             </Pressable>
             <Text style={styles.adminHint}>
               Uses fixed system credentials. Contact your supervisor for access.

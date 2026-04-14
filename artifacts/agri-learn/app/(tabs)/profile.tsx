@@ -5,6 +5,7 @@ import { useFocusEffect } from "expo-router";
 import React, { useCallback } from "react";
 import {
   Alert,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -31,6 +32,12 @@ export default function ProfileScreen() {
   const { data: stats = { completed: 0, bookmarks: 0, listings: 0 } } = useProfileStats();
 
   const handleSignOut = () => {
+    if (Platform.OS === "web") {
+      if (window.confirm("Are you sure you want to sign out?")){
+        signOut();
+      }
+      return signOut();
+    }
     Alert.alert("Sign Out", "Are you sure you want to sign out?", [
       { text: "Cancel", style: "cancel" },
       {
@@ -168,7 +175,7 @@ export default function ProfileScreen() {
               value="Manage app"
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                router.push("/(admin)/index" as any);
+                router.push("/admin");
               }}
               last
             />
