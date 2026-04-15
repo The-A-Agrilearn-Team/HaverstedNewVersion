@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # AgriLearn — Agricultural Learning Platform
 
 A React Native mobile app for South African farmers, buyers, and retailers. Features agricultural learning modules, a produce marketplace, and multilingual support.
@@ -205,3 +206,6 @@ These are defined in `artifacts/agri-learn/constants/adminConfig.ts` and can be 
 - Locations: Durban KZN, Johannesburg GP, Pretoria GP, Free State, Limpopo, Western Cape
 - Languages: English, isiZulu, Sesotho, Afrikaans, isiXhosa
 - Compliance: POPIA (Protection of Personal Information Act)
+=======
+# HaverstedNewVersion
+>>>>>>> e98841a6dfefdfc770c33967766f4a2984dee7ca
