@@ -47,6 +47,12 @@ export default function LoginScreen() {
     }
   };
 
+  const handleAdminLogin = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    router.dismissAll();
+    router.replace("/admin");
+  };
+
   return (
     <KeyboardAvoidingView
       style={{ flex: 1, backgroundColor: C.background }}
@@ -121,6 +127,16 @@ export default function LoginScreen() {
 
           <Pressable
             style={({ pressed }) => [
+              styles.forgotButton,
+              { opacity: pressed ? 0.7 : 1 },
+            ]}
+            onPress={() => router.push("/(auth)/forgot-password")}
+          >
+            <Text style={styles.forgotButtonText}>Forgot password?</Text>
+          </Pressable>
+
+          <Pressable
+            style={({ pressed }) => [
               styles.primaryButton,
               { opacity: pressed || loading ? 0.85 : 1 },
             ]}
@@ -138,6 +154,26 @@ export default function LoginScreen() {
             <View style={styles.dividerLine} />
             <Text style={styles.dividerText}>or</Text>
             <View style={styles.dividerLine} />
+          </View>
+
+          <View style={styles.adminSection}>
+            <View style={styles.adminSectionHeader}>
+              <Feather name="shield" size={14} color={C.error} />
+              <Text style={styles.adminSectionLabel}>Staff / Admin Access</Text>
+            </View>
+            <Pressable
+              style={({ pressed }) => [
+                styles.adminButton,
+                { opacity: pressed ? 0.85 : 1 },
+              ]}
+              onPress={handleAdminLogin}
+            >
+              <Feather name="shield" size={18} color={C.error} />
+              <Text style={styles.adminButtonText}>Login as Administrator</Text>
+            </Pressable>
+            <Text style={styles.adminHint}>
+              Uses fixed system credentials. Contact your supervisor for access.
+            </Text>
           </View>
 
           <Pressable
@@ -212,6 +248,17 @@ const styles = StyleSheet.create({
     right: 14,
     padding: 4,
   },
+  forgotButton: {
+    alignSelf: "flex-end",
+    paddingVertical: 2,
+    paddingHorizontal: 4,
+    marginTop: -6,
+  },
+  forgotButtonText: {
+    color: C.primary,
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+  },
   primaryButton: {
     backgroundColor: C.primary,
     borderRadius: 14,
@@ -231,6 +278,48 @@ const styles = StyleSheet.create({
   },
   dividerLine: { flex: 1, height: 1, backgroundColor: C.border },
   dividerText: { fontSize: 13, color: C.textSecondary, fontFamily: "Inter_400Regular" },
+  adminSection: {
+    backgroundColor: `${C.error}08`,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: `${C.error}20`,
+    padding: 16,
+    gap: 12,
+  },
+  adminSectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  adminSectionLabel: {
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
+    color: C.error,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  adminButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    backgroundColor: `${C.error}12`,
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: `${C.error}30`,
+  },
+  adminButtonText: {
+    color: C.error,
+    fontSize: 15,
+    fontFamily: "Inter_600SemiBold",
+  },
+  adminHint: {
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+    color: C.textTertiary,
+    textAlign: "center",
+  },
   secondaryButton: {
     borderRadius: 14,
     padding: 16,

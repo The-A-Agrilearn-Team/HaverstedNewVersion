@@ -1,9 +1,11 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
-import React from "react";
+import { useFocusEffect } from "expo-router";
+import React, { useCallback } from "react";
 import {
   Alert,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -19,10 +21,23 @@ const C = Colors.light;
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
-  const { user, profile, signOut } = useAuth();
+  const { user, profile, signOut, refreshProfile } = useAuth();
+
+  useFocusEffect(
+    useCallback(() => {
+      refreshProfile();
+    }, [])
+  );
+
   const { data: stats = { completed: 0, bookmarks: 0, listings: 0 } } = useProfileStats();
 
   const handleSignOut = () => {
+    if (Platform.OS === "web") {
+      if (window.confirm("Are you sure you want to sign out?")){
+        signOut();
+      }
+      return signOut();
+    }
     Alert.alert("Sign Out", "Are you sure you want to sign out?", [
       { text: "Cancel", style: "cancel" },
       {
@@ -146,6 +161,24 @@ export default function ProfileScreen() {
             <MenuRow icon="package" label="My Listings" badge={stats.listings > 0 ? String(stats.listings) : undefined} />
             <MenuRow icon="message-circle" label="Messages" />
             <MenuRow icon="plus-circle" label="Create New Listing" onPress={() => router.push("/listing/create")} last />
+          </View>
+        </View>
+      )}
+
+      {profile?.role === "admin" && (
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>Administration</Text>
+          <View style={styles.menuGroup}>
+            <MenuRow
+              icon="shield"
+              label="Admin Dashboard"
+              value="Manage app"
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                router.push("/admin");
+              }}
+              last
+            />
           </View>
         </View>
       )}

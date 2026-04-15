@@ -131,6 +131,58 @@ agrilearn/
     └── api-client-react/    # Generated React API client
 ```
 
+## Admin Setup (One-Time)
+
+The app has a dedicated **"Login as Administrator"** button on the login screen that uses fixed system credentials. You must create this account in Supabase once before it will work.
+
+### Step 1 — Create the admin account in Supabase
+
+Go to your **Supabase Dashboard → Authentication → Users → Add user → Create new user** and enter:
+
+| Field    | Value                    |
+|----------|--------------------------|
+| Email    | `admin@agrilearn.co.za`  |
+| Password | `AgriAdmin2025!`         |
+
+Tick **"Auto Confirm User"** so the account is immediately active.
+
+### Step 2 — Set the role to admin
+
+In **Supabase → SQL Editor**, run:
+
+```sql
+UPDATE profiles
+SET role = 'admin', full_name = 'System Administrator'
+WHERE email = 'admin@agrilearn.co.za';
+```
+
+If no row is updated (profile wasn't created automatically), insert it manually:
+
+```sql
+INSERT INTO profiles (id, email, full_name, role, language_preference)
+SELECT id, email, 'System Administrator', 'admin', 'en'
+FROM auth.users
+WHERE email = 'admin@agrilearn.co.za';
+```
+
+### Step 3 — Use it in the app
+
+1. Open the app → tap **Sign In**
+2. Scroll down to the red **"Staff / Admin Access"** section
+3. Tap **"Login as Administrator"** — no typing required
+4. You will land on the home screen; go to **Profile → Administration → Admin Dashboard**
+
+### Admin Credentials (for reference)
+
+```
+Email:    admin@agrilearn.co.za
+Password: AgriAdmin2025!
+```
+
+These are defined in `artifacts/agri-learn/constants/adminConfig.ts` and can be changed there at any time.
+
+---
+
 ## User Roles
 
 | Role      | Permissions                                              |

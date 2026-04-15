@@ -17,6 +17,9 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AuthProvider } from "@/context/AuthContext";
 
+
+
+
 SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient();
@@ -29,6 +32,7 @@ function RootLayoutNav() {
         name="(auth)"
         options={{ presentation: "modal", headerShown: false }}
       />
+      <Stack.Screen name="admin" options={{ headerShown: false }} />
       <Stack.Screen name="module/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="product/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="listing/create" options={{ headerShown: false }} />
@@ -59,8 +63,8 @@ export default function RootLayout() {
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
             <GestureHandlerRootView style={{ flex: 1 }}>
-            <RootLayoutNav />
-          </GestureHandlerRootView>
+              <RootLayoutNav />
+            </GestureHandlerRootView>
           </AuthProvider>
         </QueryClientProvider>
       </ErrorBoundary>

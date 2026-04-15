@@ -1,18 +1,27 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Linking from "expo-linking";
 import { Session, User } from "@supabase/supabase-js";
-import React, {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-} from "react";
+import React, { createContext, useContext, useEffect, useState } from "react";
+import { Platform } from "react-native";
 import { supabase, Profile } from "@/lib/supabase";
+
+function getCallbackUrl(): string {
+  if (Platform.OS === "web" && typeof window !== "undefined") {
+    return `${window.location.origin}/(auth)/callback`;
+  }
+  const replitDomain = process.env.EXPO_PUBLIC_REPLIT_DEV_DOMAIN;
+  if (replitDomain) {
+    return `https://${replitDomain}/(auth)/callback`;
+  }
+  return Linking.createURL("/(auth)/callback");
+}
 
 interface AuthContextType {
   session: Session | null;
   user: User | null;
   profile: Profile | null;
   loading: boolean;
+  profileLoaded: boolean;
   signIn: (email: string, password: string) => Promise<{ error?: string }>;
   signUp: (
     email: string,
@@ -20,6 +29,8 @@ interface AuthContextType {
     fullName: string,
     role: string
   ) => Promise<{ error?: string }>;
+  requestPasswordReset: (email: string) => Promise<{ error?: string }>;
+  updatePassword: (password: string) => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   updateProfile: (updates: {
@@ -37,12 +48,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [profileLoaded, setProfileLoaded] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
-      if (session?.user) fetchProfile(session.user.id);
+      if (session?.user) {
+        fetchProfile(session.user.id);
+      } else {
+        setProfileLoaded(true);
+      }
       setLoading(false);
     });
 
@@ -51,9 +67,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
+          setProfileLoaded(false);
           fetchProfile(session.user.id);
         } else {
           setProfile(null);
+          setProfileLoaded(true);
         }
       }
     );
@@ -62,12 +80,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const fetchProfile = async (userId: string) => {
-    const { data } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", userId)
-      .single();
-    if (data) setProfile(data as Profile);
+    try {
+      const { data } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", userId)
+        .single();
+      setProfile(data ? (data as Profile) : null);
+    } catch {
+      setProfile(null);
+    } finally {
+      setProfileLoaded(true);
+    }
   };
 
   const signIn = async (email: string, password: string) => {
@@ -82,11 +106,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     fullName: string,
     role: string
   ) => {
+    const emailRedirectTo = getCallbackUrl();
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: { full_name: fullName, role },
+        emailRedirectTo,
       },
     });
     if (error) return { error: error.message };
@@ -99,6 +125,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         language_preference: "en",
       });
     }
+    return {};
+  };
+
+  const requestPasswordReset = async (email: string) => {
+    const redirectTo = getCallbackUrl();
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo,
+    });
+    if (error) return { error: error.message };
+    return {};
+  };
+
+  const updatePassword = async (password: string) => {
+    const { error } = await supabase.auth.updateUser({ password });
+    if (error) return { error: error.message };
     return {};
   };
 
@@ -129,7 +170,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ session, user, profile, loading, signIn, signUp, signOut, refreshProfile, updateProfile }}
+      value={{
+        session,
+        user,
+        profile,
+        loading,
+        profileLoaded,
+        signIn,
+        signUp,
+        requestPasswordReset,
+        updatePassword,
+        signOut,
+        refreshProfile,
+        updateProfile,
+      }}
     >
       {children}
     </AuthContext.Provider>
