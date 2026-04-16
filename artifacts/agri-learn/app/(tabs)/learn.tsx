@@ -163,9 +163,10 @@ export default function LearnScreen() {
                         {mod.level}
                       </Text>
                     </View>
-                    <Text style={styles.durationText}>
-                      <Feather name="clock" size={11} color={C.textSecondary} /> {mod.duration_minutes} min
-                    </Text>
+                    <View style={styles.durationRow}>
+                      <Feather name="clock" size={11} color={C.textSecondary} />
+                      <Text style={styles.durationText}>{mod.duration_minutes} min</Text>
+                    </View>
                   </View>
                   <Text style={styles.moduleTitle}>{mod.title}</Text>
                   <Text style={styles.moduleDesc} numberOfLines={2}>{mod.description}</Text>
@@ -237,6 +238,7 @@ const styles = StyleSheet.create({
   moduleMetaRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 4 },
   levelPill: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
   levelText: { fontSize: 11, fontFamily: "Inter_600SemiBold" },
+  durationRow: { flexDirection: "row", alignItems: "center", gap: 3 },
   durationText: { fontSize: 12, color: C.textSecondary, fontFamily: "Inter_400Regular" },
   moduleTitle: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: C.text, marginBottom: 3 },
   moduleDesc: { fontSize: 13, fontFamily: "Inter_400Regular", color: C.textSecondary, lineHeight: 18, marginBottom: 4 },
