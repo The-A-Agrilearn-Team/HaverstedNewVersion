@@ -35,6 +35,8 @@ export default function RegisterScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [verificationSent, setVerificationSent] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState("");
 
   const handleRegister = async () => {
     if (!fullName || !email || !password) {
@@ -55,9 +57,48 @@ export default function RegisterScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } else {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      router.dismissAll();
+      setRegisteredEmail(email.trim().toLowerCase());
+      setVerificationSent(true);
     }
   };
+
+  if (verificationSent) {
+    return (
+      <View
+        style={[
+          styles.verifyContainer,
+          { paddingTop: insets.top + 32, paddingBottom: insets.bottom + 24 },
+        ]}
+      >
+        <View style={styles.verifyIconCircle}>
+          <Feather name="mail" size={36} color={C.primary} />
+        </View>
+        <Text style={styles.verifyTitle}>Check your email</Text>
+        <Text style={styles.verifySubtitle}>
+          We sent a verification link to{"\n"}
+          <Text style={{ color: C.primary, fontFamily: "Inter_600SemiBold" }}>
+            {registeredEmail}
+          </Text>
+          {"\n\n"}
+          Open the link in your email to confirm your account, then come back here to sign in.
+        </Text>
+        <Pressable
+          style={({ pressed }) => [styles.primaryButton, { opacity: pressed ? 0.85 : 1 }]}
+          onPress={() => router.replace("/(auth)/login")}
+        >
+          <Text style={styles.primaryButtonText}>Go to Sign In</Text>
+        </Pressable>
+        <Pressable
+          style={({ pressed }) => [styles.linkButton, { opacity: pressed ? 0.6 : 1, marginTop: 8 }]}
+          onPress={() => setVerificationSent(false)}
+        >
+          <Text style={styles.linkText}>
+            Wrong email? <Text style={{ color: C.primary }}>Try again</Text>
+          </Text>
+        </Pressable>
+      </View>
+    );
+  }
 
   return (
     <KeyboardAvoidingView
@@ -251,4 +292,35 @@ const styles = StyleSheet.create({
   primaryButtonText: { color: "#fff", fontSize: 16, fontFamily: "Inter_600SemiBold" },
   linkButton: { alignItems: "center", paddingVertical: 4 },
   linkText: { fontSize: 14, fontFamily: "Inter_400Regular", color: C.textSecondary },
+  verifyContainer: {
+    flex: 1,
+    backgroundColor: C.background,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 32,
+  },
+  verifyIconCircle: {
+    width: 88,
+    height: 88,
+    borderRadius: 24,
+    backgroundColor: `${C.primary}18`,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 24,
+  },
+  verifyTitle: {
+    fontSize: 26,
+    fontFamily: "Inter_700Bold",
+    color: C.text,
+    textAlign: "center",
+    marginBottom: 12,
+  },
+  verifySubtitle: {
+    fontSize: 15,
+    fontFamily: "Inter_400Regular",
+    color: C.textSecondary,
+    textAlign: "center",
+    lineHeight: 22,
+    marginBottom: 32,
+  },
 });
