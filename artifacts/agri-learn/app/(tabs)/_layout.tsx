@@ -7,20 +7,30 @@ import { Feather } from "@expo/vector-icons";
 import React from "react";
 import { Platform, StyleSheet, View, useColorScheme } from "react-native";
 import Colors from "@/constants/colors";
+import { useAuth } from "@/context/AuthContext";
 
 const C = Colors.light;
 
+function canAccessLearning(role?: string | null) {
+  return role === "farmer" || role === "admin";
+}
+
 function NativeTabLayout() {
+  const { profile } = useAuth();
+  const showLearn = canAccessLearning(profile?.role);
+
   return (
     <NativeTabs>
       <NativeTabs.Trigger name="index">
         <Icon sf={{ default: "house", selected: "house.fill" }} />
         <Label>Home</Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="learn">
-        <Icon sf={{ default: "book", selected: "book.fill" }} />
-        <Label>Learn</Label>
-      </NativeTabs.Trigger>
+      {showLearn && (
+        <NativeTabs.Trigger name="learn">
+          <Icon sf={{ default: "book", selected: "book.fill" }} />
+          <Label>Learn</Label>
+        </NativeTabs.Trigger>
+      )}
       <NativeTabs.Trigger name="market">
         <Icon sf={{ default: "storefront", selected: "storefront.fill" }} />
         <Label>Market</Label>
@@ -38,6 +48,8 @@ function ClassicTabLayout() {
   const isDark = colorScheme === "dark";
   const isIOS = Platform.OS === "ios";
   const isWeb = Platform.OS === "web";
+  const { profile } = useAuth();
+  const showLearn = canAccessLearning(profile?.role);
 
   return (
     <Tabs
@@ -86,6 +98,7 @@ function ClassicTabLayout() {
         name="learn"
         options={{
           title: "Learn",
+          href: showLearn ? undefined : null,
           tabBarIcon: ({ color }) =>
             isIOS ? (
               <SymbolView name="book" tintColor={color} size={24} />

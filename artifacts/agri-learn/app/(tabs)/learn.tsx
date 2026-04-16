@@ -14,18 +14,60 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Colors from "@/constants/colors";
+import { useAuth } from "@/context/AuthContext";
 import { useModules } from "@/hooks/useModules";
 
 const C = Colors.light;
 
 const FILTERS = ["All", "Crops", "Livestock", "Irrigation", "Soil", "Pest Control", "Business"];
 
+const ROLE_LABELS: Record<string, string> = {
+  buyer: "Buyer",
+  retailer: "Retailer",
+};
+
+function AccessDenied({ role }: { role: string }) {
+  const insets = useSafeAreaInsets();
+  return (
+    <View style={[styles.deniedContainer, { paddingTop: insets.top + 40 }]}>
+      <View style={styles.deniedIconBox}>
+        <Feather name="lock" size={36} color="#2D6A4F" />
+      </View>
+      <Text style={styles.deniedTitle}>Learning Hub</Text>
+      <Text style={styles.deniedSubtitle}>Not available for {ROLE_LABELS[role] ?? role} accounts</Text>
+      <Text style={styles.deniedBody}>
+        The AgriLearn Learning Hub is designed for farmers and farm workers. It provides
+        practical training on crops, soil, irrigation, pest control, and more.
+      </Text>
+      <View style={styles.deniedDivider} />
+      <Text style={styles.deniedHint}>
+        If you are a farmer, please contact support to update your account type.
+      </Text>
+      <Pressable
+        style={({ pressed }) => [styles.marketBtn, { opacity: pressed ? 0.85 : 1 }]}
+        onPress={() => router.replace("/(tabs)/market")}
+      >
+        <Feather name="shopping-bag" size={16} color="#fff" />
+        <Text style={styles.marketBtnText}>Browse the Marketplace</Text>
+      </Pressable>
+    </View>
+  );
+}
+
 export default function LearnScreen() {
   const insets = useSafeAreaInsets();
+  const { profile } = useAuth();
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState("All");
 
   const { data: allModules = [], isLoading, refetch } = useModules();
+
+  const role = profile?.role ?? "";
+  const canAccess = role === "farmer" || role === "admin";
+
+  if (!canAccess && role) {
+    return <AccessDenied role={role} />;
+  }
 
   const filtered = allModules.filter((m) => {
     const matchesSearch =
@@ -199,4 +241,69 @@ const styles = StyleSheet.create({
   moduleTitle: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: C.text, marginBottom: 3 },
   moduleDesc: { fontSize: 13, fontFamily: "Inter_400Regular", color: C.textSecondary, lineHeight: 18, marginBottom: 4 },
   moduleCat: { fontSize: 12, fontFamily: "Inter_500Medium", color: C.primaryLight },
+  deniedContainer: {
+    flex: 1,
+    backgroundColor: C.background,
+    alignItems: "center",
+    paddingHorizontal: 32,
+  },
+  deniedIconBox: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "#D1FAE5",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 20,
+  },
+  deniedTitle: {
+    fontSize: 26,
+    fontFamily: "Inter_700Bold",
+    color: C.text,
+    marginBottom: 6,
+    textAlign: "center",
+  },
+  deniedSubtitle: {
+    fontSize: 15,
+    fontFamily: "Inter_500Medium",
+    color: "#D97706",
+    marginBottom: 20,
+    textAlign: "center",
+  },
+  deniedBody: {
+    fontSize: 14,
+    fontFamily: "Inter_400Regular",
+    color: C.textSecondary,
+    textAlign: "center",
+    lineHeight: 22,
+  },
+  deniedDivider: {
+    width: 48,
+    height: 2,
+    backgroundColor: C.border,
+    borderRadius: 2,
+    marginVertical: 24,
+  },
+  deniedHint: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    color: C.textTertiary,
+    textAlign: "center",
+    lineHeight: 20,
+    marginBottom: 28,
+  },
+  marketBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#2D6A4F",
+    borderRadius: 14,
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+  },
+  marketBtnText: {
+    fontSize: 15,
+    fontFamily: "Inter_600SemiBold",
+    color: "#fff",
+  },
 });
