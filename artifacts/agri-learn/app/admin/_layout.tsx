@@ -9,6 +9,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  useWindowDimensions,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -21,16 +22,14 @@ const SIDEBAR_TEXT = "#FFFFFF";
 const SIDEBAR_MUTED = "rgba(255,255,255,0.55)";
 const SIDEBAR_LABEL = "rgba(255,255,255,0.4)";
 const SIDEBAR_WIDTH = 260;
+const BREAKPOINT = 768;
 
 const MAIN_NAV = [
-  { id: "index",    label: "Dashboard",        icon: "grid",         path: "/admin" },
-  { id: "users",    label: "Users",             icon: "users",        path: "/admin/users" },
-  { id: "modules",  label: "Learning Modules",  icon: "book-open",    path: "/admin/modules" },
-  { id: "listings", label: "Marketplace",       icon: "shopping-bag", path: "/admin/listings" },
-];
-
-const ACCOUNT_NAV = [
-  { id: "logs", label: "Settings", icon: "settings", path: "/admin/logs" },
+  { id: "index",    label: "Dashboard",  icon: "grid",         path: "/admin" },
+  { id: "users",    label: "Users",      icon: "users",        path: "/admin/users" },
+  { id: "modules",  label: "Modules",    icon: "book-open",    path: "/admin/modules" },
+  { id: "listings", label: "Market",     icon: "shopping-bag", path: "/admin/listings" },
+  { id: "logs",     label: "Settings",   icon: "settings",     path: "/admin/logs" },
 ];
 
 function isPathActive(currentPath: string, itemPath: string) {
@@ -54,6 +53,9 @@ function AdminSidebar({
     .toUpperCase()
     .slice(0, 2);
 
+  const sidebarNav = MAIN_NAV.slice(0, 4);
+  const accountNav = MAIN_NAV.slice(4);
+
   return (
     <View style={sidebar.container}>
       <View style={sidebar.logoRow}>
@@ -67,7 +69,7 @@ function AdminSidebar({
       </View>
 
       <Text style={sidebar.sectionLabel}>MAIN MENU</Text>
-      {MAIN_NAV.map((item) => {
+      {sidebarNav.map((item) => {
         const active = isPathActive(pathname, item.path);
         return (
           <Pressable
@@ -88,7 +90,7 @@ function AdminSidebar({
       })}
 
       <Text style={[sidebar.sectionLabel, { marginTop: 28 }]}>ACCOUNT</Text>
-      {ACCOUNT_NAV.map((item) => {
+      {accountNav.map((item) => {
         const active = isPathActive(pathname, item.path);
         return (
           <Pressable
@@ -135,10 +137,46 @@ function AdminSidebar({
   );
 }
 
+function AdminBottomBar({
+  pathname,
+  onSignOut,
+}: {
+  pathname: string;
+  onSignOut: () => void;
+}) {
+  const insets = useSafeAreaInsets();
+
+  return (
+    <View style={[bottomBar.container, { paddingBottom: insets.bottom || 8 }]}>
+      {MAIN_NAV.map((item) => {
+        const active = isPathActive(pathname, item.path);
+        return (
+          <Pressable
+            key={item.id}
+            style={bottomBar.tab}
+            onPress={() => router.replace(item.path as any)}
+          >
+            <Feather
+              name={item.icon as any}
+              size={22}
+              color={active ? "#2D6A4F" : "#9CA3AF"}
+            />
+            <Text style={[bottomBar.label, active && bottomBar.labelActive]}>
+              {item.label}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
 export default function AdminLayout() {
   const { signIn, signOut, profile } = useAuth();
   const insets = useSafeAreaInsets();
   const pathname = usePathname();
+  const { width } = useWindowDimensions();
+  const isWide = width >= BREAKPOINT;
 
   const [verified, setVerified] = useState(false);
   const [email, setEmail] = useState("");
@@ -268,16 +306,42 @@ export default function AdminLayout() {
     );
   }
 
+  if (isWide) {
+    return (
+      <View style={{ flex: 1, flexDirection: "row", backgroundColor: "#F0F4F2" }}>
+        <AdminSidebar pathname={pathname} profile={profile} onSignOut={handleSignOut} />
+        <View style={{ flex: 1 }}>
+          <Stack screenOptions={{ headerShown: false, animation: "none" }}>
+            <Stack.Screen name="index" />
+            <Stack.Screen name="users" />
+            <Stack.Screen name="listings" />
+            <Stack.Screen name="modules" />
+            <Stack.Screen name="logs" />
+          </Stack>
+        </View>
+      </View>
+    );
+  }
+
   return (
-    <View style={{ flex: 1, flexDirection: "row", backgroundColor: "#F0F4F2" }}>
-      <AdminSidebar pathname={pathname} profile={profile} onSignOut={handleSignOut} />
-      <View style={{ flex: 1 }}>
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            animation: "none",
-          }}
+    <View style={{ flex: 1, backgroundColor: "#F0F4F2" }}>
+      <View style={[mobileHeader.bar, { paddingTop: insets.top + 8 }]}>
+        <View style={mobileHeader.logoRow}>
+          <View style={mobileHeader.logoIcon}>
+            <Feather name="feather" size={14} color="#fff" />
+          </View>
+          <Text style={mobileHeader.title}>AgriLearn Admin</Text>
+        </View>
+        <Pressable
+          onPress={handleSignOut}
+          style={({ pressed }) => [mobileHeader.signOutBtn, { opacity: pressed ? 0.7 : 1 }]}
         >
+          <Feather name="log-out" size={16} color={SIDEBAR_MUTED} />
+        </Pressable>
+      </View>
+
+      <View style={{ flex: 1 }}>
+        <Stack screenOptions={{ headerShown: false, animation: "none" }}>
           <Stack.Screen name="index" />
           <Stack.Screen name="users" />
           <Stack.Screen name="listings" />
@@ -285,6 +349,8 @@ export default function AdminLayout() {
           <Stack.Screen name="logs" />
         </Stack>
       </View>
+
+      <AdminBottomBar pathname={pathname} onSignOut={handleSignOut} />
     </View>
   );
 }
@@ -397,6 +463,64 @@ const sidebar = StyleSheet.create({
     fontSize: 14,
     fontFamily: "Inter_500Medium",
     color: SIDEBAR_MUTED,
+  },
+});
+
+const mobileHeader = StyleSheet.create({
+  bar: {
+    backgroundColor: SIDEBAR_BG,
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  logoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  logoIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    backgroundColor: "#2D6A4F",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  title: {
+    fontSize: 16,
+    fontFamily: "Inter_700Bold",
+    color: "#fff",
+  },
+  signOutBtn: {
+    padding: 6,
+  },
+});
+
+const bottomBar = StyleSheet.create({
+  container: {
+    flexDirection: "row",
+    backgroundColor: "#fff",
+    borderTopWidth: 1,
+    borderTopColor: "#E5E7EB",
+    paddingTop: 8,
+  },
+  tab: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 6,
+    gap: 3,
+  },
+  label: {
+    fontSize: 10,
+    fontFamily: "Inter_500Medium",
+    color: "#9CA3AF",
+  },
+  labelActive: {
+    color: "#2D6A4F",
+    fontFamily: "Inter_600SemiBold",
   },
 });
 
