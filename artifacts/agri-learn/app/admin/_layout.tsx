@@ -10,6 +10,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  useWindowDimensions,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -54,6 +55,51 @@ function generateTOTP(secret: number): { code: string; remaining: number } {
 function isPathActive(currentPath: string, itemPath: string) {
   if (itemPath === "/admin") return currentPath === "/admin";
   return currentPath.startsWith(itemPath);
+}
+
+const MOBILE_BREAKPOINT = 768;
+
+function AdminBottomNav({
+  pathname,
+  onSignOut,
+  insets,
+}: {
+  pathname: string;
+  onSignOut: () => void;
+  insets: { bottom: number };
+}) {
+  const allItems = [
+    ...MAIN_NAV,
+    { id: "logs", label: "Settings", icon: "settings", path: "/admin/logs" },
+  ];
+
+  return (
+    <View style={[bottomNav.container, { paddingBottom: Math.max(insets.bottom, 8) }]}>
+      {allItems.map((item) => {
+        const active = isPathActive(pathname, item.path);
+        return (
+          <Pressable
+            key={item.id}
+            style={bottomNav.tab}
+            onPress={() => router.replace(item.path as any)}
+          >
+            <Feather
+              name={item.icon as any}
+              size={20}
+              color={active ? SIDEBAR_ACTIVE : "#9CA3AF"}
+            />
+            <Text style={[bottomNav.tabLabel, active && bottomNav.tabLabelActive]}>
+              {item.label === "Learning Modules" ? "Modules" : item.label}
+            </Text>
+          </Pressable>
+        );
+      })}
+      <Pressable style={bottomNav.tab} onPress={onSignOut}>
+        <Feather name="log-out" size={20} color="#9CA3AF" />
+        <Text style={bottomNav.tabLabel}>Sign Out</Text>
+      </Pressable>
+    </View>
+  );
 }
 
 function AdminSidebar({
@@ -157,6 +203,8 @@ export default function AdminLayout() {
   const { signIn, signOut, profile } = useAuth();
   const insets = useSafeAreaInsets();
   const pathname = usePathname();
+  const { width } = useWindowDimensions();
+  const isMobile = width < MOBILE_BREAKPOINT;
 
   const [verified, setVerified] = useState(false);
   const [step, setStep] = useState<Step>(Step.Credentials);
@@ -449,23 +497,42 @@ export default function AdminLayout() {
     );
   }
 
+  const stackContent = (
+    <Stack screenOptions={{ headerShown: false, animation: "none" }}>
+      <Stack.Screen name="index" />
+      <Stack.Screen name="users" />
+      <Stack.Screen name="listings" />
+      <Stack.Screen name="modules" />
+      <Stack.Screen name="logs" />
+    </Stack>
+  );
+
+  if (isMobile) {
+    return (
+      <View style={{ flex: 1, flexDirection: "column", backgroundColor: "#F0F4F2" }}>
+        <View style={[mobileHeader.bar, { paddingTop: insets.top + 8 }]}>
+          <View style={mobileHeader.logoRow}>
+            <View style={mobileHeader.logoIcon}>
+              <Feather name="feather" size={14} color="#fff" />
+            </View>
+            <Text style={mobileHeader.logoTitle}>AgriLearn</Text>
+            <Text style={mobileHeader.badge}>Admin</Text>
+          </View>
+        </View>
+        <View style={{ flex: 1 }}>{stackContent}</View>
+        <AdminBottomNav
+          pathname={pathname}
+          onSignOut={handleSignOut}
+          insets={insets}
+        />
+      </View>
+    );
+  }
+
   return (
     <View style={{ flex: 1, flexDirection: "row", backgroundColor: "#F0F4F2" }}>
       <AdminSidebar pathname={pathname} profile={profile} onSignOut={handleSignOut} />
-      <View style={{ flex: 1 }}>
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            animation: "none",
-          }}
-        >
-          <Stack.Screen name="index" />
-          <Stack.Screen name="users" />
-          <Stack.Screen name="listings" />
-          <Stack.Screen name="modules" />
-          <Stack.Screen name="logs" />
-        </Stack>
-      </View>
+      <View style={{ flex: 1 }}>{stackContent}</View>
     </View>
   );
 }
@@ -765,5 +832,69 @@ const gate = StyleSheet.create({
   otpBoxFilled: {
     borderColor: "#2D6A4F",
     backgroundColor: "rgba(45,106,79,0.05)",
+  },
+});
+
+const bottomNav = StyleSheet.create({
+  container: {
+    flexDirection: "row",
+    backgroundColor: "#fff",
+    borderTopWidth: 1,
+    borderTopColor: "#E5E7EB",
+    paddingTop: 8,
+    paddingHorizontal: 4,
+  },
+  tab: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 3,
+    paddingVertical: 4,
+  },
+  tabLabel: {
+    fontSize: 10,
+    fontFamily: "Inter_500Medium",
+    color: "#9CA3AF",
+  },
+  tabLabelActive: {
+    color: SIDEBAR_ACTIVE,
+    fontFamily: "Inter_600SemiBold",
+  },
+});
+
+const mobileHeader = StyleSheet.create({
+  bar: {
+    backgroundColor: SIDEBAR_BG,
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+  },
+  logoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  logoIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: SIDEBAR_ACTIVE,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  logoTitle: {
+    fontSize: 16,
+    fontFamily: "Inter_700Bold",
+    color: "#fff",
+  },
+  badge: {
+    fontSize: 11,
+    fontFamily: "Inter_600SemiBold",
+    color: SIDEBAR_ACTIVE,
+    backgroundColor: "rgba(82,183,136,0.2)",
+    borderRadius: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    marginLeft: 4,
+    overflow: "hidden",
   },
 });

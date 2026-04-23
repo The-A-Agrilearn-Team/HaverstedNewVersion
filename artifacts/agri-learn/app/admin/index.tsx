@@ -118,7 +118,7 @@ export default function AdminDashboard() {
           <View style={styles.adminAvatar}>
             <Text style={styles.adminAvatarText}>{initials}</Text>
           </View>
-          <Text style={styles.adminName}>{profile?.full_name ?? "Super Admin"}</Text>
+          <Text style={styles.adminName} numberOfLines={1}>{profile?.full_name ?? "Super Admin"}</Text>
         </View>
       </View>
 
@@ -259,6 +259,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: "Inter_600SemiBold",
     color: "#1A1A1A",
+    maxWidth: 120,
   },
   errorBanner: {
     flexDirection: "row",
