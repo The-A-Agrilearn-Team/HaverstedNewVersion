@@ -131,49 +131,60 @@ export default function ProfileScreen() {
         )}
       </View>
 
-      <View style={styles.statsRow}>
-        <View style={styles.stat}>
-          <Text style={styles.statNum}>{stats.completed}</Text>
-          <Text style={styles.statLbl}>Completed</Text>
+      {profile?.role !== "buyer" && (
+        <View style={styles.statsRow}>
+          <View style={styles.stat}>
+            <Text style={styles.statNum}>{stats.completed}</Text>
+            <Text style={styles.statLbl}>Completed</Text>
+          </View>
+          <View style={[styles.stat, styles.statBorder]}>
+            <Text style={styles.statNum}>{stats.bookmarks}</Text>
+            <Text style={styles.statLbl}>Bookmarks</Text>
+          </View>
+          <View style={styles.stat}>
+            <Text style={styles.statNum}>{stats.listings}</Text>
+            <Text style={styles.statLbl}>Listings</Text>
+          </View>
         </View>
-        <View style={[styles.stat, styles.statBorder]}>
-          <Text style={styles.statNum}>{stats.bookmarks}</Text>
-          <Text style={styles.statLbl}>Bookmarks</Text>
-        </View>
-        <View style={styles.stat}>
-          <Text style={styles.statNum}>{stats.listings}</Text>
-          <Text style={styles.statLbl}>Listings</Text>
-        </View>
-      </View>
+      )}
 
       <View style={styles.section}>
         <Text style={styles.sectionLabel}>Account</Text>
         <View style={styles.menuGroup}>
           <MenuRow icon="user" label="Personal Information" onPress={() => router.push("/profile/edit")} />
           <MenuRow icon="map-pin" label="Location" value={profile?.location ?? "Not set"} onPress={() => router.push("/profile/edit")} />
-          <MenuRow icon="globe" label="Language" value={profile?.language_preference ?? "English"} onPress={() => router.push("/profile/edit")} last />
+          <MenuRow icon="globe" label="Language" value={profile?.language_pref ?? "English"} onPress={() => router.push("/profile/edit")} last />
         </View>
       </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionLabel}>Learning</Text>
-        <View style={styles.menuGroup}>
-          <MenuRow icon="bookmark" label="Saved Modules" badge={stats.bookmarks > 0 ? String(stats.bookmarks) : undefined} />
-          <MenuRow icon="award" label="My Progress" badge={stats.completed > 0 ? `${stats.completed} done` : undefined} />
-          <MenuRow icon="download" label="Offline Content" last />
-        </View>
-      </View>
-
-      {(profile?.role === "farmer" || profile?.role === "admin") && (
+      {profile?.role !== "buyer" && (
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Marketplace</Text>
+          <Text style={styles.sectionLabel}>Learning</Text>
           <View style={styles.menuGroup}>
-            <MenuRow icon="package" label="My Listings" badge={stats.listings > 0 ? String(stats.listings) : undefined} />
-            <MenuRow icon="message-circle" label="Messages" />
-            <MenuRow icon="plus-circle" label="Create New Listing" onPress={() => router.push("/listing/create")} last />
+            <MenuRow icon="bookmark" label="Saved Modules" badge={stats.bookmarks > 0 ? String(stats.bookmarks) : undefined} />
+            <MenuRow icon="award" label="My Progress" badge={stats.completed > 0 ? `${stats.completed} done` : undefined} />
+            <MenuRow icon="download" label="Offline Content" last />
           </View>
         </View>
       )}
+
+      <View style={styles.section}>
+        <Text style={styles.sectionLabel}>Marketplace</Text>
+        <View style={styles.menuGroup}>
+          {profile?.role === "buyer" ? (
+            <>
+              <MenuRow icon="shopping-bag" label="Browse Listings" onPress={() => router.push("/(tabs)/market")} />
+              <MenuRow icon="message-circle" label="Messages" last />
+            </>
+          ) : (
+            <>
+              <MenuRow icon="package" label="My Listings" badge={stats.listings > 0 ? String(stats.listings) : undefined} />
+              <MenuRow icon="message-circle" label="Messages" />
+              <MenuRow icon="plus-circle" label="Create New Listing" onPress={() => router.push("/listing/create")} last />
+            </>
+          )}
+        </View>
+      </View>
 
       {profile?.role === "admin" && (
         <View style={styles.section}>
@@ -196,9 +207,9 @@ export default function ProfileScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionLabel}>Support</Text>
         <View style={styles.menuGroup}>
-          <MenuRow icon="help-circle" label="Help & FAQ" />
-          <MenuRow icon="shield" label="Privacy Policy" />
-          <MenuRow icon="file-text" label="Terms of Service" last />
+          <MenuRow icon="help-circle" label="Help & FAQ" onPress={() => router.push("/support/faq")} />
+          <MenuRow icon="shield" label="Privacy Policy" onPress={() => router.push("/support/privacy")} />
+          <MenuRow icon="file-text" label="Terms of Service" onPress={() => router.push("/support/terms")} last />
         </View>
       </View>
 

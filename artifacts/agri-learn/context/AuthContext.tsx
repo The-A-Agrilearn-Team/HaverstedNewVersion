@@ -37,7 +37,7 @@ interface AuthContextType {
     full_name?: string;
     phone?: string;
     location?: string;
-    language_preference?: string;
+    language_pref?: string;
   }) => Promise<{ error?: string }>;
 }
 
@@ -122,7 +122,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         email,
         full_name: fullName,
         role,
-        language_preference: "en",
+        language_pref: "en",
       });
     }
     return {};
@@ -156,7 +156,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     full_name?: string;
     phone?: string;
     location?: string;
-    language_preference?: string;
+    language_pref?: string;
   }) => {
     if (!user) return { error: "Not signed in" };
     const { error } = await supabase

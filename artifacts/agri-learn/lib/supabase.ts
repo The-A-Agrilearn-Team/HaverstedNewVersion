@@ -24,7 +24,7 @@ export interface Profile {
   role: UserRole;
   phone?: string;
   location?: string;
-  language_preference: string;
+  language_pref: string;
   created_at: string;
 }
 
