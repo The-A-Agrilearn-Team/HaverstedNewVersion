@@ -165,9 +165,10 @@ export default function HomeScreen() {
                       color: mod.level === "beginner" ? "#059669" : mod.level === "intermediate" ? "#D97706" : "#DB2777"
                     }]}>{mod.level}</Text>
                   </View>
-                  <Text style={styles.moduleDuration}>
-                    <Feather name="clock" size={11} color={C.textSecondary} /> {mod.duration_minutes}m
-                  </Text>
+                  <View style={styles.moduleDurationRow}>
+                    <Feather name="clock" size={11} color={C.textSecondary} />
+                    <Text style={styles.moduleDuration}>{mod.duration_minutes}m</Text>
+                  </View>
                 </View>
                 <Text style={styles.moduleTitle}>{mod.title}</Text>
                 <Text style={styles.moduleDesc} numberOfLines={2}>{mod.description}</Text>
@@ -336,6 +337,7 @@ const styles = StyleSheet.create({
   },
   levelBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
   levelText: { fontSize: 11, fontFamily: "Inter_600SemiBold" },
+  moduleDurationRow: { flexDirection: "row", alignItems: "center", gap: 3 },
   moduleDuration: { fontSize: 12, color: C.textSecondary, fontFamily: "Inter_400Regular" },
   moduleTitle: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: C.text },
   moduleDesc: {
