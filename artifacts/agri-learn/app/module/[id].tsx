@@ -52,7 +52,33 @@ function useSingleModule(id: string) {
 export default function ModuleDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
+
+  const role = profile?.role ?? "";
+  const canAccess = role === "farmer" || role === "admin" || role === "";
+
+  if (!canAccess) {
+    return (
+      <View style={{ flex: 1, backgroundColor: C.background, alignItems: "center", justifyContent: "center", padding: 32 }}>
+        <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: "#D1FAE5", alignItems: "center", justifyContent: "center", marginBottom: 20 }}>
+          <Feather name="lock" size={32} color="#2D6A4F" />
+        </View>
+        <Text style={{ fontSize: 20, fontFamily: "Inter_700Bold", color: C.text, marginBottom: 8, textAlign: "center" }}>
+          Access Restricted
+        </Text>
+        <Text style={{ fontSize: 14, fontFamily: "Inter_400Regular", color: C.textSecondary, textAlign: "center", lineHeight: 22, marginBottom: 28 }}>
+          Learning modules are only available to farmers and admins. Your account type ({role}) does not have access.
+        </Text>
+        <Pressable
+          style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1, backgroundColor: "#2D6A4F", borderRadius: 12, paddingHorizontal: 24, paddingVertical: 13, flexDirection: "row", alignItems: "center", gap: 8 })}
+          onPress={() => router.back()}
+        >
+          <Feather name="arrow-left" size={16} color="#fff" />
+          <Text style={{ fontSize: 15, fontFamily: "Inter_600SemiBold", color: "#fff" }}>Go Back</Text>
+        </Pressable>
+      </View>
+    );
+  }
 
   const { data: mod, isLoading } = useSingleModule(id ?? "1");
   const { data: bookmarkedIds = [] } = useBookmarks();

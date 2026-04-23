@@ -11,6 +11,7 @@ import {
   StyleSheet,
   Text,
   View,
+  useWindowDimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "@/context/AuthContext";
@@ -21,6 +22,7 @@ const C = Colors.light;
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
+  const { height } = useWindowDimensions();
   const { user, profile, signOut, refreshProfile } = useAuth();
 
   useFocusEffect(
@@ -53,7 +55,15 @@ export default function ProfileScreen() {
 
   if (!user) {
     return (
-      <View style={[styles.guestContainer, { paddingTop: insets.top + 60 }]}>
+      <ScrollView
+        style={{ flex: 1, backgroundColor: C.background }}
+        contentContainerStyle={[
+          styles.guestContainer,
+          { minHeight: height, paddingTop: insets.top + 60, paddingBottom: insets.bottom + 40 },
+        ]}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
         <View style={styles.guestIconBox}>
           <Feather name="user" size={40} color={C.primary} />
         </View>
@@ -76,7 +86,7 @@ export default function ProfileScreen() {
         >
           <Text style={styles.registerBtnText}>Create Account</Text>
         </Pressable>
-      </View>
+      </ScrollView>
     );
   }
 
@@ -243,7 +253,11 @@ function MenuRow({
 
 const styles = StyleSheet.create({
   guestContainer: {
-    flex: 1, backgroundColor: C.background, alignItems: "center", paddingHorizontal: 32, gap: 16,
+    backgroundColor: C.background,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 32,
+    gap: 16,
   },
   guestIconBox: {
     width: 96, height: 96, borderRadius: 48, backgroundColor: `${C.primary}12`, alignItems: "center", justifyContent: "center", marginBottom: 8,

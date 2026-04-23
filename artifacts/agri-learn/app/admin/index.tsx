@@ -1,175 +1,443 @@
-
 import { Feather } from "@expo/vector-icons";
-import { router } from "expo-router";
 import React from "react";
 import {
-  ActivityIndicator,
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
+  ActivityIndicator,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Colors from "@/constants/colors";
 import { useAuth } from "@/context/AuthContext";
 import { useAdminStats } from "@/hooks/useAdmin";
 
- 
+const BG = "#F0F4F2";
+const BANNER_GREEN = "#2D6A4F";
+const CARD_BG = "#FFFFFF";
+const LIVE_GREEN = "#2D9B6F";
 
-const C = Colors.light;
-
- 
-
-const NAV_ITEMS = [
-  { label: "Users",       sub: "Manage accounts & roles", icon: "users",     color: "#3B82F6", route: "/admin/users" },
-  { label: "Listings",    sub: "Moderate marketplace",    icon: "package",   color: "#F2994A", route: "/admin/listings" },
-  { label: "Modules",     sub: "Manage learning content", icon: "book-open", color: "#2D6A4F", route: "/admin/modules" },
-  { label: "Activity Log",sub: "View recent actions",     icon: "activity",  color: "#7C3AED", route: "/admin/logs" },
-];
-
- 
-
-export default function AdminDashboard() {
-  const insets = useSafeAreaInsets();
-  const { profile } = useAuth();
-  const { data: stats, isLoading, refetch } = useAdminStats();
-
- 
-
-  const STAT_CARDS = [
-    { label: "Total Users",    value: stats?.totalUsers ?? 0,    icon: "users",     color: "#3B82F6" },
-    { label: "New Today",      value: stats?.newUsersToday ?? 0, icon: "user-plus",  color: "#059669" },
-    { label: "Active Listings",value: stats?.activeListings ?? 0,icon: "shopping-bag",color: "#F2994A" },
-    { label: "Modules",        value: stats?.totalModules ?? 0,  icon: "book-open",  color: "#2D6A4F" },
-  ];
-
- 
-
-  return (
-<ScrollView
-      style={{ flex: 1, backgroundColor: C.background }}
-      showsVerticalScrollIndicator={false}
-      refreshControl={<RefreshControl refreshing={false} onRefresh={refetch} tintColor={C.primary} />}
->
-<View style={[styles.header, { paddingTop: insets.top + 16 }]}>
-<View style={styles.adminBadge}>
-<Feather name="shield" size={14} color="#fff" />
-<Text style={styles.adminBadgeText}>Admin Panel</Text>
-</View>
-<Text style={styles.headerTitle}>Dashboard</Text>
-<Text style={styles.headerSub}>Welcome back, {profile?.full_name?.split(" ")[0] ?? "Admin"}</Text>
-</View>
-
- 
-
-      <View style={styles.statsGrid}>
-        {isLoading
-          ? <ActivityIndicator color={C.primary} style={{ padding: 20 }} />
-          : STAT_CARDS.map((s) => (
-<View key={s.label} style={styles.statCard}>
-<View style={[styles.statIcon, { backgroundColor: `${s.color}15` }]}>
-<Feather name={s.icon as any} size={20} color={s.color} />
-</View>
-<Text style={styles.statValue}>{s.value}</Text>
-<Text style={styles.statLabel}>{s.label}</Text>
-</View>
-          ))
-        }
-</View>
-
- 
-
-      <View style={styles.section}>
-<Text style={styles.sectionLabel}>Management</Text>
-<View style={styles.navGroup}>
-          {NAV_ITEMS.map((item, i) => (
-<Pressable
-              key={item.label}
-              style={({ pressed }) => [
-                styles.navRow,
-                i < NAV_ITEMS.length - 1 && styles.navRowBorder,
-                { opacity: pressed ? 0.7 : 1 },
-              ]}
-              onPress={() => router.push(item.route as any)}
->
-<View style={[styles.navIcon, { backgroundColor: `${item.color}15` }]}>
-<Feather name={item.icon as any} size={20} color={item.color} />
-</View>
-<View style={{ flex: 1 }}>
-<Text style={styles.navLabel}>{item.label}</Text>
-<Text style={styles.navSub}>{item.sub}</Text>
-</View>
-<Feather name="chevron-right" size={18} color={C.textTertiary} />
-</Pressable>
-          ))}
-</View>
-</View>
-
- 
-
-      <View style={{ height: 60 }} />
-</ScrollView>
-  );
+function LiveBadge() {
+  return (
+    <View style={styles.liveBadge}>
+      <Feather name="arrow-up-right" size={12} color={LIVE_GREEN} />
+      <Text style={styles.liveText}>Live</Text>
+    </View>
+  );
 }
 
- 
+function StatCard({
+  icon,
+  iconBg,
+  iconColor,
+  value,
+  label,
+  sublabel,
+  loading,
+}: {
+  icon: string;
+  iconBg: string;
+  iconColor: string;
+  value: number;
+  label: string;
+  sublabel: string;
+  loading?: boolean;
+}) {
+  return (
+    <View style={styles.statCard}>
+      <View style={styles.statCardTop}>
+        <View style={[styles.statIconBg, { backgroundColor: iconBg }]}>
+          <Feather name={icon as any} size={20} color={iconColor} />
+        </View>
+        <LiveBadge />
+      </View>
+      {loading ? (
+        <ActivityIndicator color="#9CA3AF" size="small" style={{ marginVertical: 8 }} />
+      ) : (
+        <Text style={styles.statValue}>{value}</Text>
+      )}
+      <Text style={styles.statLabel}>{label}</Text>
+      <Text style={styles.statSub}>{sublabel}</Text>
+    </View>
+  );
+}
+
+function RLSErrorBanner({ onRetry }: { onRetry: () => void }) {
+  return (
+    <View style={styles.errorBanner}>
+      <View style={styles.errorIconBox}>
+        <Feather name="alert-triangle" size={22} color="#D97706" />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.errorTitle}>Database Setup Required</Text>
+        <Text style={styles.errorBody}>
+          The database has a policy conflict (infinite recursion in RLS). Run the SQL fix to resolve it:
+        </Text>
+        <View style={styles.errorSteps}>
+          <Text style={styles.errorStep}>1. Open your Supabase dashboard → SQL Editor</Text>
+          <Text style={styles.errorStep}>2. Open the file: <Text style={styles.codePath}>supabase/fix_rls.sql</Text></Text>
+          <Text style={styles.errorStep}>3. Paste and run it, then reload the app</Text>
+        </View>
+      </View>
+      <Pressable
+        style={({ pressed }) => [styles.retryBtn, { opacity: pressed ? 0.7 : 1 }]}
+         onPress={() => onRetry()}
+      >
+        <Feather name="refresh-cw" size={14} color="#2D6A4F" />
+      </Pressable>
+    </View>
+  );
+}
+
+export default function AdminDashboard() {
+  const { profile } = useAuth();
+  const { data: stats, isLoading, error, refetch } = useAdminStats();
+
+  const isRLSError = (error as any)?.message === "RLS_RECURSION" ||
+    (error as any)?.message?.includes("infinite recursion");
+
+  const initials = (profile?.full_name ?? "SA")
+    .split(" ")
+    .map((w: string) => w[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+
+  return (
+    <ScrollView
+      style={styles.scroll}
+      contentContainerStyle={styles.content}
+      showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl refreshing={false} onRefresh={refetch} tintColor={BANNER_GREEN} />
+      }
+    >
+      <View style={styles.topBar}>
+        <Text style={styles.pageTitle}>Dashboard</Text>
+        <View style={styles.adminBadge}>
+          <View style={styles.adminAvatar}>
+            <Text style={styles.adminAvatarText}>{initials}</Text>
+          </View>
+          <Text style={styles.adminName}>{profile?.full_name ?? "Super Admin"}</Text>
+        </View>
+      </View>
+
+      {(error && isRLSError) && (
+        <RLSErrorBanner onRetry={refetch} />
+      )}
+
+      {(error && !isRLSError) && (
+        <View style={styles.genericError}>
+          <Feather name="wifi-off" size={16} color="#DC2626" />
+          <Text style={styles.genericErrorText}>
+            Could not load stats — {(error as any)?.message ?? "check your connection"}
+          </Text>
+          <Pressable onPress={() => refetch()} style={styles.retryInline}>
+            <Text style={styles.retryInlineText}>Retry</Text>
+          </Pressable>
+        </View>
+      )}
+
+      <View style={styles.welcomeBanner}>
+        <View style={styles.bannerLeaf}>
+          <Feather name="feather" size={64} color="rgba(255,255,255,0.12)" />
+        </View>
+        <Text style={styles.bannerGreeting}>Welcome back,</Text>
+        <Text style={styles.bannerTitle}>AgriLearn Admin Portal</Text>
+        <View style={styles.bannerPills}>
+          <View style={styles.pill}>
+            <Feather name="users" size={13} color="rgba(255,255,255,0.85)" />
+            <Text style={styles.pillText}>
+              {isLoading ? "…" : `${stats?.totalUsers ?? 0} registered users`}
+            </Text>
+          </View>
+          <View style={styles.pill}>
+            <Feather name="book-open" size={13} color="rgba(255,255,255,0.85)" />
+            <Text style={styles.pillText}>
+              {isLoading ? "…" : `${stats?.totalModules ?? 0} learning modules`}
+            </Text>
+          </View>
+          <View style={styles.pill}>
+            <Feather name="shopping-bag" size={13} color="rgba(255,255,255,0.85)" />
+            <Text style={styles.pillText}>
+              {isLoading ? "…" : `${stats?.activeListings ?? 0} active listings`}
+            </Text>
+          </View>
+        </View>
+      </View>
+
+      <View style={styles.statsGrid}>
+        <StatCard
+          icon="users"
+          iconBg="rgba(59,130,246,0.12)"
+          iconColor="#3B82F6"
+          value={stats?.totalUsers ?? 0}
+          label="Total Users"
+          sublabel={`${stats?.newUsersThisMonth ?? 0} new this month`}
+          loading={isLoading}
+        />
+        <StatCard
+          icon="activity"
+          iconBg="rgba(16,185,129,0.12)"
+          iconColor="#10B981"
+          value={stats?.farmersCount ?? 0}
+          label="Total Farmers"
+          sublabel={`${stats?.retailersCount ?? 0} retailers`}
+          loading={isLoading}
+        />
+        <StatCard
+          icon="shopping-bag"
+          iconBg="rgba(242,153,74,0.12)"
+          iconColor="#F2994A"
+          value={stats?.activeListings ?? 0}
+          label="Active Listings"
+          sublabel={`of ${stats?.totalListings ?? 0} total`}
+          loading={isLoading}
+        />
+        <StatCard
+          icon="layers"
+          iconBg="rgba(124,58,237,0.12)"
+          iconColor="#7C3AED"
+          value={stats?.totalModules ?? 0}
+          label="Learning Modules"
+          sublabel={`across ${stats?.categoriesCount ?? 0} categories`}
+          loading={isLoading}
+        />
+      </View>
+    </ScrollView>
+  );
+}
 
 const styles = StyleSheet.create({
-  header: {
-    paddingHorizontal: 20,
-    paddingBottom: 24,
-    backgroundColor: C.primary,
-  },
-  adminBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    alignSelf: "flex-start",
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    marginBottom: 12,
-  },
-  adminBadgeText: { fontSize: 12, fontFamily: "Inter_600SemiBold", color: "#fff" },
-  headerTitle: { fontSize: 28, fontFamily: "Inter_700Bold", color: "#fff" },
-  headerSub: { fontSize: 14, fontFamily: "Inter_400Regular", color: "rgba(255,255,255,0.75)", marginTop: 4 },
-  statsGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    paddingHorizontal: 12,
-    paddingTop: 20,
-    gap: 10,
-    marginBottom: 24,
-  },
-  statCard: {
-    flex: 1,
-    minWidth: "44%",
-    backgroundColor: C.surface,
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: C.border,
-    gap: 8,
-  },
-  statIcon: { width: 40, height: 40, borderRadius: 10, alignItems: "center", justifyContent: "center" },
-  statValue: { fontSize: 26, fontFamily: "Inter_700Bold", color: C.text },
-  statLabel: { fontSize: 12, fontFamily: "Inter_400Regular", color: C.textSecondary },
-  section: { marginHorizontal: 16, marginBottom: 20 },
-  sectionLabel: {
-    fontSize: 12, fontFamily: "Inter_600SemiBold", color: C.textSecondary,
-    textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 10,
-  },
-  navGroup: { backgroundColor: C.surface, borderRadius: 16, borderWidth: 1, borderColor: C.border },
-  navRow: {
-    flexDirection: "row", alignItems: "center", gap: 14,
-    paddingHorizontal: 16, paddingVertical: 16,
-  },
-  navRowBorder: { borderBottomWidth: 1, borderBottomColor: C.borderLight },
-  navIcon: { width: 44, height: 44, borderRadius: 12, alignItems: "center", justifyContent: "center" },
-  navLabel: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: C.text },
-  navSub: { fontSize: 12, fontFamily: "Inter_400Regular", color: C.textSecondary, marginTop: 2 },
+  scroll: {
+    flex: 1,
+    backgroundColor: BG,
+  },
+  content: {
+    padding: 24,
+    paddingBottom: 48,
+    gap: 20,
+  },
+  topBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  pageTitle: {
+    fontSize: 24,
+    fontFamily: "Inter_700Bold",
+    color: "#1A1A1A",
+  },
+  adminBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: "#fff",
+    borderRadius: 24,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  adminAvatar: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "#2D6A4F",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  adminAvatarText: {
+    fontSize: 11,
+    fontFamily: "Inter_700Bold",
+    color: "#fff",
+  },
+  adminName: {
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+    color: "#1A1A1A",
+  },
+  errorBanner: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
+    backgroundColor: "#FFFBEB",
+    borderRadius: 14,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#FDE68A",
+  },
+  errorIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: "#FEF3C7",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  errorTitle: {
+    fontSize: 14,
+    fontFamily: "Inter_700Bold",
+    color: "#92400E",
+    marginBottom: 4,
+  },
+  errorBody: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    color: "#78350F",
+    lineHeight: 18,
+    marginBottom: 8,
+  },
+  errorSteps: { gap: 3 },
+  errorStep: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: "#92400E",
+    lineHeight: 18,
+  },
+  codePath: {
+    fontFamily: "Inter_600SemiBold",
+    color: "#1B4332",
+  },
+  retryBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: "#D1FAE5",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  genericError: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#FEF2F2",
+    borderRadius: 10,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: "#FECACA",
+  },
+  genericErrorText: {
+    flex: 1,
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    color: "#DC2626",
+  },
+  retryInline: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+    backgroundColor: "#DC2626",
+  },
+  retryInlineText: {
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
+    color: "#fff",
+  },
+  welcomeBanner: {
+    backgroundColor: BANNER_GREEN,
+    borderRadius: 20,
+    padding: 24,
+    overflow: "hidden",
+    position: "relative",
+  },
+  bannerLeaf: {
+    position: "absolute",
+    right: 16,
+    top: 16,
+  },
+  bannerGreeting: {
+    fontSize: 14,
+    fontFamily: "Inter_400Regular",
+    color: "rgba(255,255,255,0.8)",
+    marginBottom: 4,
+  },
+  bannerTitle: {
+    fontSize: 22,
+    fontFamily: "Inter_700Bold",
+    color: "#fff",
+    marginBottom: 16,
+  },
+  bannerPills: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  pill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  pillText: {
+    fontSize: 12,
+    fontFamily: "Inter_500Medium",
+    color: "rgba(255,255,255,0.9)",
+  },
+  statsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 14,
+  },
+  statCard: {
+    flex: 1,
+    minWidth: "44%",
+    backgroundColor: CARD_BG,
+    borderRadius: 16,
+    padding: 18,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  statCardTop: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+  statIconBg: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  liveBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
+  },
+  liveText: {
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
+    color: LIVE_GREEN,
+  },
+  statValue: {
+    fontSize: 32,
+    fontFamily: "Inter_700Bold",
+    color: "#1A1A1A",
+    marginBottom: 4,
+    lineHeight: 38,
+  },
+  statLabel: {
+    fontSize: 14,
+    fontFamily: "Inter_500Medium",
+    color: "#1A1A1A",
+    marginBottom: 2,
+  },
+  statSub: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: "#9CA3AF",
+  },
 });
-
