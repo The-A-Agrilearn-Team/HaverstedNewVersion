@@ -69,6 +69,25 @@ export function useRecentListings() {
   });
 }
 
+export function useMyListings(farmerId?: string) {
+  return useQuery({
+    queryKey: ["listings", "mine", farmerId],
+    queryFn: async () => {
+      if (!farmerId) return [];
+      const { data, error } = await supabase
+        .from("product_listings")
+        .select("*")
+        .eq("farmer_id", farmerId)
+        .order("created_at", { ascending: false });
+      if (error || !data) return [];
+      return data as ProductListing[];
+    },
+    enabled: !!farmerId,
+    staleTime: 60 * 1000,
+    retry: false,
+  });
+}
+
 export function useCreateListing() {
   const queryClient = useQueryClient();
   return useMutation({

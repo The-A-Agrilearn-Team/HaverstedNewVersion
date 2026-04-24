@@ -1,5 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import { Image } from "expo-image";
 import { router, useLocalSearchParams } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import React, { useState } from "react";
@@ -112,7 +113,18 @@ export default function ProductDetailScreen() {
         contentContainerStyle={{ paddingBottom: insets.bottom + 120 }}
       >
         <View style={styles.imageBox}>
-          <Feather name="package" size={52} color={C.primary} />
+          {item.image_url ? (
+            <Image
+              source={{ uri: item.image_url }}
+              style={styles.productImage}
+              contentFit="cover"
+              transition={300}
+            />
+          ) : (
+            <View style={styles.imagePlaceholder}>
+              <Feather name="package" size={52} color={C.primary} />
+            </View>
+          )}
           <View style={styles.statusBadge}>
             <View style={styles.statusDot} />
             <Text style={styles.statusText}>Available</Text>
@@ -218,7 +230,9 @@ const styles = StyleSheet.create({
   },
   navBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: C.surfaceSecondary, alignItems: "center", justifyContent: "center" },
   navTitle: { fontSize: 16, fontFamily: "Inter_600SemiBold", color: C.text },
-  imageBox: { height: 200, backgroundColor: `${C.primary}10`, alignItems: "center", justifyContent: "center", marginHorizontal: 20, borderRadius: 20, marginBottom: 20, position: "relative" },
+  imageBox: { height: 220, marginHorizontal: 20, borderRadius: 20, marginBottom: 20, position: "relative", overflow: "hidden" },
+  productImage: { width: "100%", height: "100%", borderRadius: 20 },
+  imagePlaceholder: { flex: 1, backgroundColor: `${C.primary}10`, alignItems: "center", justifyContent: "center", borderRadius: 20 },
   statusBadge: { position: "absolute", top: 14, right: 14, flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: "#fff", borderRadius: 20, paddingHorizontal: 10, paddingVertical: 5 },
   statusDot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: C.success },
   statusText: { fontSize: 12, fontFamily: "Inter_600SemiBold", color: C.success },
