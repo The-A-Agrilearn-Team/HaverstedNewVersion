@@ -161,9 +161,24 @@ export default function ProfileScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Learning</Text>
           <View style={styles.menuGroup}>
-            <MenuRow icon="bookmark" label="Saved Modules" badge={stats.bookmarks > 0 ? String(stats.bookmarks) : undefined} />
-            <MenuRow icon="award" label="My Progress" badge={stats.completed > 0 ? `${stats.completed} done` : undefined} />
-            <MenuRow icon="download" label="Offline Content" last />
+            <MenuRow
+              icon="bookmark"
+              label="Saved Modules"
+              badge={stats.bookmarks > 0 ? String(stats.bookmarks) : undefined}
+              onPress={() => router.push("/profile/saved-modules" as any)}
+            />
+            <MenuRow
+              icon="award"
+              label="My Progress"
+              badge={stats.completed > 0 ? `${stats.completed} done` : undefined}
+              onPress={() => router.push("/profile/my-progress" as any)}
+            />
+            <MenuRow
+              icon="download"
+              label="Offline Content"
+              onPress={() => router.push("/profile/offline-content" as any)}
+              last
+            />
           </View>
         </View>
       )}
@@ -174,12 +189,17 @@ export default function ProfileScreen() {
           {profile?.role === "buyer" ? (
             <>
               <MenuRow icon="shopping-bag" label="Browse Listings" onPress={() => router.push("/(tabs)/market")} />
-              <MenuRow icon="message-circle" label="Messages" last />
+              <MenuRow icon="message-circle" label="Messages" onPress={() => router.push("/profile/messages" as any)} last />
             </>
           ) : (
             <>
-              <MenuRow icon="package" label="My Listings" badge={stats.listings > 0 ? String(stats.listings) : undefined} />
-              <MenuRow icon="message-circle" label="Messages" />
+              <MenuRow
+                icon="package"
+                label="My Listings"
+                badge={stats.listings > 0 ? String(stats.listings) : undefined}
+                onPress={() => router.push("/profile/my-listings" as any)}
+              />
+              <MenuRow icon="message-circle" label="Messages" onPress={() => router.push("/profile/messages" as any)} />
               <MenuRow icon="plus-circle" label="Create New Listing" onPress={() => router.push("/listing/create")} last />
             </>
           )}
