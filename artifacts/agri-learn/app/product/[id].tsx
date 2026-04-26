@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Colors from "@/constants/colors";
 import { supabase, ProductListing } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
+import { useSendNotification } from "@/hooks/useNotifications";
 
 const C = Colors.light;
 
@@ -58,10 +59,11 @@ export default function ProductDetailScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const [contacted, setContacted] = useState(false);
+  const sendNotification = useSendNotification();
 
   const { data: item, isLoading } = useSingleListing(id ?? "1");
 
-  const handleContact = () => {
+  const handleContact = async () => {
     if (!user) {
       Alert.alert("Sign In Required", "Please sign in to contact the seller.", [
         { text: "Cancel", style: "cancel" },
@@ -69,13 +71,24 @@ export default function ProductDetailScreen() {
       ]);
       return;
     }
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    setContacted(true);
-    Alert.alert(
-      "Request Sent",
-      `Your interest in "${item?.title}" has been sent to ${item?.farmer_name}. They will contact you shortly.`,
-      [{ text: "OK" }]
-    );
+    if (!item) return;
+
+    try {
+      await sendNotification.mutateAsync({
+        farmerId: item.farmer_id,
+        listingId: item.id,
+        listingTitle: item.title,
+      });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setContacted(true);
+      Alert.alert(
+        "Request Sent",
+        `Your interest in "${item.title}" has been sent to ${item.farmer_name}. They will contact you shortly.`,
+        [{ text: "OK" }]
+      );
+    } catch {
+      Alert.alert("Error", "Could not send your request. Please try again.");
+    }
   };
 
   if (isLoading || !item) {
@@ -209,14 +222,19 @@ export default function ProductDetailScreen() {
           style={({ pressed }) => [
             styles.contactBtn,
             contacted && styles.contactedBtn,
+            (contacted || sendNotification.isPending) && { opacity: 0.8 },
             { opacity: pressed ? 0.85 : 1 },
           ]}
           onPress={handleContact}
-          disabled={contacted}
+          disabled={contacted || sendNotification.isPending}
         >
-          <Feather name={contacted ? "check" : "message-circle"} size={20} color="#fff" />
+          {sendNotification.isPending ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <Feather name={contacted ? "check" : "message-circle"} size={20} color="#fff" />
+          )}
           <Text style={styles.contactBtnText}>
-            {contacted ? "Request Sent" : "Contact Seller"}
+            {sendNotification.isPending ? "Sending..." : contacted ? "Request Sent" : "Contact Seller"}
           </Text>
         </Pressable>
       </View>

@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "@/context/AuthContext";
 import Colors from "@/constants/colors";
 import { useProfileStats } from "@/hooks/useProgress";
+import { useUnreadCount } from "@/hooks/useNotifications";
 
 const C = Colors.light;
 
@@ -32,6 +33,7 @@ export default function ProfileScreen() {
   );
 
   const { data: stats = { completed: 0, bookmarks: 0, listings: 0 } } = useProfileStats();
+  const { data: unreadMessages = 0 } = useUnreadCount();
 
   const handleSignOut = () => {
     if (Platform.OS === "web") {
@@ -189,7 +191,13 @@ export default function ProfileScreen() {
           {profile?.role === "buyer" ? (
             <>
               <MenuRow icon="shopping-bag" label="Browse Listings" onPress={() => router.push("/(tabs)/market")} />
-              <MenuRow icon="message-circle" label="Messages" onPress={() => router.push("/profile/messages" as any)} last />
+              <MenuRow
+                icon="message-circle"
+                label="Messages"
+                badge={unreadMessages > 0 ? String(unreadMessages) : undefined}
+                onPress={() => router.push("/profile/messages" as any)}
+                last
+              />
             </>
           ) : (
             <>
@@ -199,7 +207,12 @@ export default function ProfileScreen() {
                 badge={stats.listings > 0 ? String(stats.listings) : undefined}
                 onPress={() => router.push("/profile/my-listings" as any)}
               />
-              <MenuRow icon="message-circle" label="Messages" onPress={() => router.push("/profile/messages" as any)} />
+              <MenuRow
+                icon="message-circle"
+                label="Messages"
+                badge={unreadMessages > 0 ? String(unreadMessages) : undefined}
+                onPress={() => router.push("/profile/messages" as any)}
+              />
               <MenuRow icon="plus-circle" label="Create New Listing" onPress={() => router.push("/listing/create")} last />
             </>
           )}
