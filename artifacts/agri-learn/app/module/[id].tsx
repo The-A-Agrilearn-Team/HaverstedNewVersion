@@ -55,7 +55,35 @@ export default function ModuleDetailScreen() {
   const { user, profile } = useAuth();
 
   const role = profile?.role ?? "";
-  const canAccess = role === "farmer" || role === "admin" || role === "";
+  const canAccess = role === "farmer" || role === "admin";
+
+  if (!user) {
+    return (
+      <View style={{ flex: 1, backgroundColor: C.background, alignItems: "center", justifyContent: "center", padding: 32 }}>
+        <View style={{ width: 80, height: 80, borderRadius: 24, backgroundColor: "#D1FAE5", alignItems: "center", justifyContent: "center", marginBottom: 24 }}>
+          <Feather name="book-open" size={36} color="#2D6A4F" />
+        </View>
+        <Text style={{ fontSize: 24, fontFamily: "Inter_700Bold", color: C.text, marginBottom: 10, textAlign: "center" }}>
+          Farmers Only
+        </Text>
+        <Text style={{ fontSize: 15, fontFamily: "Inter_400Regular", color: C.textSecondary, textAlign: "center", lineHeight: 23, marginBottom: 32 }}>
+          Learning modules are exclusively available to registered farmers. Create a farmer account to access this content.
+        </Text>
+        <Pressable
+          style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1, backgroundColor: "#2D6A4F", borderRadius: 14, paddingHorizontal: 28, paddingVertical: 14, width: "100%", alignItems: "center" })}
+          onPress={() => router.replace("/(auth)/register")}
+        >
+          <Text style={{ fontSize: 16, fontFamily: "Inter_600SemiBold", color: "#fff" }}>Register as a Farmer</Text>
+        </Pressable>
+        <Pressable
+          style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1, marginTop: 14, paddingVertical: 10 })}
+          onPress={() => router.replace("/(auth)/login")}
+        >
+          <Text style={{ fontSize: 14, fontFamily: "Inter_500Medium", color: C.primary }}>Already have an account? Sign in</Text>
+        </Pressable>
+      </View>
+    );
+  }
 
   if (!canAccess) {
     return (
