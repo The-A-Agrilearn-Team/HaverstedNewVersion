@@ -15,9 +15,10 @@ export interface Notification {
   buyer_name: string;
   listing_title: string;
   message: string;
+  accepted: boolean;
 }
 
-function parseContent(raw: string): { buyer_name: string; listing_title: string; message: string } {
+function parseContent(raw: string): { buyer_name: string; listing_title: string; message: string; accepted?: boolean } {
   try {
     return JSON.parse(raw);
   } catch {
@@ -48,7 +49,8 @@ export function useNotifications() {
           listing_title: parsed.listing_title,
           message: parsed.message,
           is_read: !!row.read_at,
-        } as Notification & { is_read: boolean };
+          accepted: !!parsed.accepted,
+        } as Notification;
       });
     },
     staleTime: 20 * 1000,
@@ -150,6 +152,29 @@ export function useMarkOneRead() {
         .from("messages")
         .update({ read_at: now })
         .eq("id", notificationId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["notifications", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["notificationsUnread", user?.id] });
+    },
+  });
+}
+
+export function useAcceptRequest() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: async ({ id, currentContent }: { id: string; currentContent: string }) => {
+      let parsed: any = {};
+      try { parsed = JSON.parse(currentContent); } catch {}
+      const updated = JSON.stringify({ ...parsed, accepted: true });
+      const now = new Date().toISOString();
+      const { error } = await supabase
+        .from("messages")
+        .update({ content: updated, read_at: now })
+        .eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {

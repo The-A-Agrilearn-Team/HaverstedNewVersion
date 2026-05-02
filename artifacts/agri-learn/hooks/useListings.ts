@@ -105,3 +105,19 @@ export function useCreateListing() {
     },
   });
 }
+
+export function useMarkAsSold() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (listingId: string) => {
+      const { error } = await supabase
+        .from("product_listings")
+        .update({ status: "sold" })
+        .eq("id", listingId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["listings"] });
+    },
+  });
+}

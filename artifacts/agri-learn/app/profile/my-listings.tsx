@@ -5,6 +5,7 @@ import { router } from "expo-router";
 import React from "react";
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -15,7 +16,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Colors from "@/constants/colors";
 import { useAuth } from "@/context/AuthContext";
-import { useMyListings } from "@/hooks/useListings";
+import { useMyListings, useMarkAsSold } from "@/hooks/useListings";
 
 const C = Colors.light;
 
@@ -34,6 +35,7 @@ export default function MyListingsScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { data: listings = [], isLoading, refetch } = useMyListings(user?.id);
+  const markAsSold = useMarkAsSold();
 
   const activeCount = listings.filter((l) => l.status === "active").length;
 
@@ -141,6 +143,38 @@ export default function MyListingsScreen() {
                         </View>
                       )}
                     </View>
+                    {item.status === "active" && (
+                      <Pressable
+                        style={({ pressed }) => [styles.soldBtn, { opacity: pressed ? 0.8 : 1 }]}
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          Alert.alert(
+                            "Mark as Sold?",
+                            `This will remove "${item.title}" from the marketplace. It will still appear in your listings as sold.`,
+                            [
+                              { text: "Cancel", style: "cancel" },
+                              {
+                                text: "Mark as Sold",
+                                style: "destructive",
+                                onPress: () => {
+                                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                                  markAsSold.mutate(item.id, { onSuccess: () => refetch() });
+                                },
+                              },
+                            ]
+                          );
+                        }}
+                      >
+                        <Feather name="check-circle" size={13} color="#6B7280" />
+                        <Text style={styles.soldBtnText}>Mark as Sold</Text>
+                      </Pressable>
+                    )}
+                    {item.status === "sold" && (
+                      <View style={styles.soldStamp}>
+                        <Feather name="check-circle" size={13} color="#6B7280" />
+                        <Text style={styles.soldStampText}>Sold</Text>
+                      </View>
+                    )}
                   </View>
                 </Pressable>
               );
@@ -181,4 +215,30 @@ const styles = StyleSheet.create({
   unit: { fontSize: 11, fontFamily: "Inter_400Regular", color: C.textSecondary },
   metaChip: { flexDirection: "row", alignItems: "center", gap: 3 },
   metaText: { fontSize: 11, fontFamily: "Inter_400Regular", color: C.textSecondary },
+  soldBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    alignSelf: "flex-start",
+    borderWidth: 1,
+    borderColor: C.border,
+    borderRadius: 7,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    marginTop: 2,
+    backgroundColor: C.surfaceSecondary,
+  },
+  soldBtnText: { fontSize: 12, fontFamily: "Inter_500Medium", color: "#6B7280" },
+  soldStamp: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    alignSelf: "flex-start",
+    backgroundColor: "#E5E7EB",
+    borderRadius: 7,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    marginTop: 2,
+  },
+  soldStampText: { fontSize: 12, fontFamily: "Inter_500Medium", color: "#6B7280" },
 });

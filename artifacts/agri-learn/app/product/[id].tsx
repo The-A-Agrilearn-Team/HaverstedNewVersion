@@ -57,7 +57,8 @@ function useSingleListing(id: string) {
 export default function ProductDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
+  const isFarmer = profile?.role === "farmer" || profile?.role === "admin";
   const [contacted, setContacted] = useState(false);
   const sendNotification = useSendNotification();
 
@@ -217,27 +218,29 @@ export default function ProductDetailScreen() {
         </View>
       </ScrollView>
 
-      <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
-        <Pressable
-          style={({ pressed }) => [
-            styles.contactBtn,
-            contacted && styles.contactedBtn,
-            (contacted || sendNotification.isPending) && { opacity: 0.8 },
-            { opacity: pressed ? 0.85 : 1 },
-          ]}
-          onPress={handleContact}
-          disabled={contacted || sendNotification.isPending}
-        >
-          {sendNotification.isPending ? (
-            <ActivityIndicator size="small" color="#fff" />
-          ) : (
-            <Feather name={contacted ? "check" : "message-circle"} size={20} color="#fff" />
-          )}
-          <Text style={styles.contactBtnText}>
-            {sendNotification.isPending ? "Sending..." : contacted ? "Request Sent" : "Contact Seller"}
-          </Text>
-        </Pressable>
-      </View>
+      {!isFarmer && (
+        <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.contactBtn,
+              contacted && styles.contactedBtn,
+              (contacted || sendNotification.isPending) && { opacity: 0.8 },
+              { opacity: pressed ? 0.85 : 1 },
+            ]}
+            onPress={handleContact}
+            disabled={contacted || sendNotification.isPending}
+          >
+            {sendNotification.isPending ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Feather name={contacted ? "check" : "message-circle"} size={20} color="#fff" />
+            )}
+            <Text style={styles.contactBtnText}>
+              {sendNotification.isPending ? "Sending..." : contacted ? "Request Sent" : "Contact Seller"}
+            </Text>
+          </Pressable>
+        </View>
+      )}
     </View>
   );
 }

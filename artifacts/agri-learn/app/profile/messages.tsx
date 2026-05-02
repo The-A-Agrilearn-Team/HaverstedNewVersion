@@ -14,7 +14,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Colors from "@/constants/colors";
 import { useAuth } from "@/context/AuthContext";
-import { useNotifications, useMarkAllRead, useMarkOneRead } from "@/hooks/useNotifications";
+import { useNotifications, useMarkAllRead, useMarkOneRead, useAcceptRequest } from "@/hooks/useNotifications";
 
 const C = Colors.light;
 
@@ -37,6 +37,7 @@ export default function MessagesScreen() {
   const { data: notifications = [], isLoading, refetch } = useNotifications();
   const markAllRead = useMarkAllRead();
   const markOneRead = useMarkOneRead();
+  const acceptRequest = useAcceptRequest();
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;
 
@@ -145,7 +146,7 @@ export default function MessagesScreen() {
                 {notifications.map((n) => (
                   <Pressable
                     key={n.id}
-                    style={[styles.card, !n.is_read && styles.cardUnread]}
+                    style={[styles.card, !n.is_read && styles.cardUnread, n.accepted && styles.cardAccepted]}
                     onPress={() => handleTapNotification(n.id, n.is_read)}
                   >
                     <View style={styles.cardIcon}>
@@ -164,6 +165,30 @@ export default function MessagesScreen() {
                         <Text style={styles.listingTagText} numberOfLines={1}>{n.listing_title}</Text>
                       </View>
                       <Text style={styles.cardMessage} numberOfLines={3}>{n.message}</Text>
+                      <View style={styles.cardActions}>
+                        {n.accepted ? (
+                          <View style={styles.acceptedBadge}>
+                            <Feather name="check-circle" size={13} color="#059669" />
+                            <Text style={styles.acceptedBadgeText}>Request Accepted</Text>
+                          </View>
+                        ) : (
+                          <Pressable
+                            style={({ pressed }) => [
+                              styles.acceptBtn,
+                              acceptRequest.isPending && { opacity: 0.7 },
+                              { opacity: pressed ? 0.8 : 1 },
+                            ]}
+                            onPress={() => {
+                              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                              acceptRequest.mutate({ id: n.id, currentContent: n.content });
+                            }}
+                            disabled={acceptRequest.isPending}
+                          >
+                            <Feather name="check" size={14} color="#fff" />
+                            <Text style={styles.acceptBtnText}>Accept Request</Text>
+                          </Pressable>
+                        )}
+                      </View>
                     </View>
                   </Pressable>
                 ))}
@@ -231,4 +256,28 @@ const styles = StyleSheet.create({
   tipRow: { flexDirection: "row", alignItems: "center", gap: 12 },
   tipIcon: { width: 32, height: 32, borderRadius: 8, backgroundColor: `${C.primary}12`, alignItems: "center", justifyContent: "center" },
   tipText: { flex: 1, fontSize: 13, fontFamily: "Inter_400Regular", color: C.textSecondary, lineHeight: 19 },
+  cardAccepted: { borderColor: "#A7F3D0", backgroundColor: "#F0FDF4" },
+  cardActions: { marginTop: 4 },
+  acceptBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    alignSelf: "flex-start",
+    backgroundColor: C.primary,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+  acceptBtnText: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: "#fff" },
+  acceptedBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    alignSelf: "flex-start",
+    backgroundColor: "#D1FAE5",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  acceptedBadgeText: { fontSize: 12, fontFamily: "Inter_600SemiBold", color: "#059669" },
 });
