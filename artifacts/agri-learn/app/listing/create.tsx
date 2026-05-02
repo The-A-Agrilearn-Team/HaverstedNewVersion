@@ -88,6 +88,7 @@ export default function CreateListingScreen() {
   const [declared, setDeclared] = useState(false);
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [photoUploading, setPhotoUploading] = useState(false);
+  const [publishedTitle, setPublishedTitle] = useState<string | null>(null);
 
   const handlePickPhoto = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -169,16 +170,49 @@ export default function CreateListingScreen() {
       });
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert(
-        "Listing Published!",
-        `"${title.trim()}" is now live on the marketplace.`,
-        [{ text: "View Marketplace", onPress: () => router.replace("/(tabs)/market") }]
-      );
+      setPublishedTitle(title.trim());
     } catch (err: any) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert("Failed to publish", err?.message ?? "Please try again.");
     }
   };
+
+  if (publishedTitle !== null) {
+    return (
+      <View style={[styles.successContainer, { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 32 }]}>
+        <View style={styles.successIconRing}>
+          <View style={styles.successIconInner}>
+            <Feather name="check" size={38} color="#fff" />
+          </View>
+        </View>
+        <Text style={styles.successHeading}>Listing Published!</Text>
+        <Text style={styles.successProduct}>"{publishedTitle}"</Text>
+        <Text style={styles.successBody}>
+          Your product is now live on the AgriLearn marketplace and visible to buyers.
+        </Text>
+        <View style={styles.successDivider} />
+        <Pressable
+          style={({ pressed }) => [styles.successMarketBtn, { opacity: pressed ? 0.85 : 1 }]}
+          onPress={() => router.replace("/(tabs)/market")}
+        >
+          <Feather name="shopping-bag" size={18} color="#fff" />
+          <Text style={styles.successMarketBtnText}>Go to Marketplace</Text>
+        </Pressable>
+        <Pressable
+          style={({ pressed }) => [styles.successNewBtn, { opacity: pressed ? 0.7 : 1 }]}
+          onPress={() => {
+            setPublishedTitle(null);
+            setTitle(""); setDescription(""); setPrice(""); setQuantity(""); setLocation("");
+            setCategory("Vegetables"); setUnit("kg"); setPhotoUri(null);
+            setChecklist({ noRot: false, clean: false, packed: false, noChemicals: false });
+            setDeclared(false); setErrors({});
+          }}
+        >
+          <Text style={styles.successNewBtnText}>Create Another Listing</Text>
+        </Pressable>
+      </View>
+    );
+  }
 
   return (
     <KeyboardAvoidingView
@@ -821,4 +855,82 @@ const styles = StyleSheet.create({
   actList: { gap: 10 },
   actRow: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
   actText: { flex: 1, fontSize: 13, fontFamily: "Inter_500Medium", color: "#5B21B6", lineHeight: 19 },
+  successContainer: {
+    flex: 1,
+    backgroundColor: C.background,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 32,
+  },
+  successIconRing: {
+    width: 104,
+    height: 104,
+    borderRadius: 52,
+    backgroundColor: "#D1FAE5",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 28,
+  },
+  successIconInner: {
+    width: 78,
+    height: 78,
+    borderRadius: 39,
+    backgroundColor: C.primary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  successHeading: {
+    fontSize: 28,
+    fontFamily: "Inter_700Bold",
+    color: C.text,
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  successProduct: {
+    fontSize: 16,
+    fontFamily: "Inter_600SemiBold",
+    color: C.primary,
+    textAlign: "center",
+    marginBottom: 16,
+  },
+  successBody: {
+    fontSize: 14,
+    fontFamily: "Inter_400Regular",
+    color: C.textSecondary,
+    textAlign: "center",
+    lineHeight: 22,
+  },
+  successDivider: {
+    width: 48,
+    height: 2,
+    backgroundColor: C.border,
+    borderRadius: 2,
+    marginVertical: 28,
+  },
+  successMarketBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: C.primary,
+    borderRadius: 14,
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    width: "100%",
+    justifyContent: "center",
+  },
+  successMarketBtnText: {
+    fontSize: 16,
+    fontFamily: "Inter_600SemiBold",
+    color: "#fff",
+  },
+  successNewBtn: {
+    marginTop: 16,
+    paddingVertical: 10,
+  },
+  successNewBtnText: {
+    fontSize: 14,
+    fontFamily: "Inter_500Medium",
+    color: C.primary,
+    textAlign: "center",
+  },
 });
