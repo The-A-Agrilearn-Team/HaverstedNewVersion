@@ -2,34 +2,43 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase, LearningModule } from "@/lib/supabase";
 
 const MOCK_MODULES: LearningModule[] = [
-  { id: "1", title: "Intro to Crop Rotation", description: "Improve soil health through strategic crop rotation techniques.", category: "Crops", level: "beginner", content: "", duration_minutes: 15, language: "en", created_at: new Date().toISOString() },
-  { id: "2", title: "Water Management Basics", description: "Efficient irrigation strategies for small-scale farms in South Africa.", category: "Irrigation", level: "beginner", content: "", duration_minutes: 20, language: "en", created_at: new Date().toISOString() },
-  { id: "3", title: "Soil Testing & pH", description: "Understanding soil composition and how to optimize it for better yields.", category: "Soil", level: "intermediate", content: "", duration_minutes: 25, language: "en", created_at: new Date().toISOString() },
-  { id: "4", title: "Pest Identification Guide", description: "Learn to identify and manage common crop pests in Southern Africa.", category: "Pest Control", level: "beginner", content: "", duration_minutes: 18, language: "en", created_at: new Date().toISOString() },
-  { id: "5", title: "Selling at Farmers Markets", description: "How to price and present your produce for maximum sales.", category: "Business", level: "beginner", content: "", duration_minutes: 22, language: "en", created_at: new Date().toISOString() },
-  { id: "6", title: "Livestock Health Basics", description: "Essential health management for small-scale livestock operations.", category: "Livestock", level: "beginner", content: "", duration_minutes: 30, language: "en", created_at: new Date().toISOString() },
+  { id: "1", title: "Growing Tomatoes: Complete Guide", description: "Step-by-step guide to planting, watering, nurturing, and harvesting tomatoes in South African conditions.", category: "Crops", level: "beginner", content: "", duration_minutes: 45, language: "en", created_at: new Date().toISOString() },
+  { id: "2", title: "Growing Spinach: Complete Guide", description: "How to plant, water, feed, and harvest spinach for a continuous supply throughout the year.", category: "Crops", level: "beginner", content: "", duration_minutes: 30, language: "en", created_at: new Date().toISOString() },
+  { id: "3", title: "Growing Potatoes: Complete Guide", description: "Step-by-step instructions for planting, hilling, watering, and harvesting potatoes in South Africa.", category: "Crops", level: "beginner", content: "", duration_minutes: 50, language: "en", created_at: new Date().toISOString() },
+  { id: "4", title: "Growing Carrots: Complete Guide", description: "Learn to plant, thin, water, and harvest carrots for crisp, sweet results in South African gardens.", category: "Crops", level: "beginner", content: "", duration_minutes: 40, language: "en", created_at: new Date().toISOString() },
+  { id: "5", title: "Growing Onions: Complete Guide", description: "Complete instructions for raising, transplanting, watering, and curing onions in South Africa.", category: "Crops", level: "intermediate", content: "", duration_minutes: 55, language: "en", created_at: new Date().toISOString() },
+  { id: "6", title: "Growing Butternut Squash: Complete Guide", description: "How to plant, train, water, and harvest butternut squash for excellent yield and quality.", category: "Crops", level: "beginner", content: "", duration_minutes: 40, language: "en", created_at: new Date().toISOString() },
+  { id: "7", title: "Growing Mangoes: Complete Guide", description: "From young tree establishment to first harvest — a complete mango-growing guide for South African farmers.", category: "Crops", level: "intermediate", content: "", duration_minutes: 60, language: "en", created_at: new Date().toISOString() },
+  { id: "8", title: "Growing Cabbage: Complete Guide", description: "Step-by-step guide to raising, transplanting, feeding, and harvesting firm, quality cabbage heads.", category: "Crops", level: "beginner", content: "", duration_minutes: 42, language: "en", created_at: new Date().toISOString() },
 ];
 
 async function fetchModules(category?: string): Promise<LearningModule[]> {
-  let query = supabase
-    .from("learning_modules")
-    .select("*")
-    .eq("is_active", true)
-    .order("created_at", { ascending: false });
+  const base = MOCK_MODULES.filter(
+    (m) => !category || category === "All" || m.category === category
+  );
 
-  if (category && category !== "All") {
-    query = query.eq("category", category);
-  }
+  try {
+    let query = supabase
+      .from("learning_modules")
+      .select("*")
+      .eq("is_active", true)
+      .order("created_at", { ascending: false });
 
-  const { data, error } = await query;
+    if (category && category !== "All") {
+      query = query.eq("category", category);
+    }
 
-  if (error || !data || data.length === 0) {
-    return MOCK_MODULES.filter(
-      (m) => !category || category === "All" || m.category === category
-    );
-  }
+    const { data } = await query;
+    if (data && data.length > 0) {
+      const mockTitles = new Set(MOCK_MODULES.map((m) => m.title));
+      const extras = (data as LearningModule[]).filter(
+        (m) => !mockTitles.has(m.title)
+      );
+      return [...base, ...extras];
+    }
+  } catch {}
 
-  return data as LearningModule[];
+  return base;
 }
 
 export function useModules(category?: string) {
@@ -45,15 +54,23 @@ export function useFeaturedModules() {
   return useQuery({
     queryKey: ["modules", "featured"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("learning_modules")
-        .select("*")
-        .eq("is_active", true)
-        .limit(5)
-        .order("created_at", { ascending: false });
+      const mockTitles = new Set(MOCK_MODULES.map((m) => m.title));
+      try {
+        const { data } = await supabase
+          .from("learning_modules")
+          .select("*")
+          .eq("is_active", true)
+          .limit(5)
+          .order("created_at", { ascending: false });
 
-      if (error || !data || data.length === 0) return MOCK_MODULES.slice(0, 3);
-      return data as LearningModule[];
+        if (data && data.length > 0) {
+          const extras = (data as LearningModule[]).filter(
+            (m) => !mockTitles.has(m.title)
+          );
+          return [...MOCK_MODULES.slice(0, 5), ...extras].slice(0, 5);
+        }
+      } catch {}
+      return MOCK_MODULES.slice(0, 5);
     },
     staleTime: 5 * 60 * 1000,
     retry: false,

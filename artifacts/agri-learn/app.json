@@ -13,26 +13,16 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-    "ios": {
-      "supportsTablet": false
-    },
+    "ios": { "supportsTablet": false },
     "android": {},
-    "web": {
-      "favicon": "./assets/images/icon.png"
-    },
+    "web": { "favicon": "./assets/images/icon.png" },
     "plugins": [
-      [
-        "expo-router",
-        {
-          "origin": "https://replit.com/"
-        }
-      ],
       "expo-font",
       "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,
-      "reactCompiler": true
+      "reactCompiler": false
     }
   }
 }
