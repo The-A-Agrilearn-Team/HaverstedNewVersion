@@ -23,16 +23,14 @@ const SIDEBAR_TEXT = "#FFFFFF";
 const SIDEBAR_MUTED = "rgba(255,255,255,0.55)";
 const SIDEBAR_LABEL = "rgba(255,255,255,0.4)";
 const SIDEBAR_WIDTH = 260;
+const BREAKPOINT = 768;
 
 const MAIN_NAV = [
-  { id: "index",    label: "Dashboard",        icon: "grid",         path: "/admin" },
-  { id: "users",    label: "Users",             icon: "users",        path: "/admin/users" },
-  { id: "modules",  label: "Learning Modules",  icon: "book-open",    path: "/admin/modules" },
-  { id: "listings", label: "Marketplace",       icon: "shopping-bag", path: "/admin/listings" },
-];
-
-const ACCOUNT_NAV = [
-  { id: "logs", label: "Settings", icon: "settings", path: "/admin/logs" },
+  { id: "index",    label: "Dashboard",  icon: "grid",         path: "/admin" },
+  { id: "users",    label: "Users",      icon: "users",        path: "/admin/users" },
+  { id: "modules",  label: "Modules",    icon: "book-open",    path: "/admin/modules" },
+  { id: "listings", label: "Market",     icon: "shopping-bag", path: "/admin/listings" },
+  { id: "logs",     label: "Settings",   icon: "settings",     path: "/admin/logs" },
 ];
 
 const OTP_LENGTH = 6;
@@ -118,6 +116,9 @@ function AdminSidebar({
     .toUpperCase()
     .slice(0, 2);
 
+  const sidebarNav = MAIN_NAV.slice(0, 4);
+  const accountNav = MAIN_NAV.slice(4);
+
   return (
     <View style={sidebar.container}>
       <View style={sidebar.logoRow}>
@@ -131,7 +132,7 @@ function AdminSidebar({
       </View>
 
       <Text style={sidebar.sectionLabel}>MAIN MENU</Text>
-      {MAIN_NAV.map((item) => {
+      {sidebarNav.map((item) => {
         const active = isPathActive(pathname, item.path);
         return (
           <Pressable
@@ -152,7 +153,7 @@ function AdminSidebar({
       })}
 
       <Text style={[sidebar.sectionLabel, { marginTop: 28 }]}>ACCOUNT</Text>
-      {ACCOUNT_NAV.map((item) => {
+      {accountNav.map((item) => {
         const active = isPathActive(pathname, item.path);
         return (
           <Pressable
@@ -195,6 +196,40 @@ function AdminSidebar({
         <Feather name="log-out" size={16} color={SIDEBAR_MUTED} />
         <Text style={sidebar.signOutText}>Sign Out</Text>
       </Pressable>
+    </View>
+  );
+}
+
+function AdminBottomBar({
+  pathname,
+  onSignOut,
+}: {
+  pathname: string;
+  onSignOut: () => void;
+}) {
+  const insets = useSafeAreaInsets();
+
+  return (
+    <View style={[bottomBar.container, { paddingBottom: insets.bottom || 8 }]}>
+      {MAIN_NAV.map((item) => {
+        const active = isPathActive(pathname, item.path);
+        return (
+          <Pressable
+            key={item.id}
+            style={bottomBar.tab}
+            onPress={() => router.replace(item.path as any)}
+          >
+            <Feather
+              name={item.icon as any}
+              size={22}
+              color={active ? "#2D6A4F" : "#9CA3AF"}
+            />
+            <Text style={[bottomBar.label, active && bottomBar.labelActive]}>
+              {item.label}
+            </Text>
+          </Pressable>
+        );
+      })}
     </View>
   );
 }
@@ -645,6 +680,64 @@ const sidebar = StyleSheet.create({
     fontSize: 14,
     fontFamily: "Inter_500Medium",
     color: SIDEBAR_MUTED,
+  },
+});
+
+const mobileHeader = StyleSheet.create({
+  bar: {
+    backgroundColor: SIDEBAR_BG,
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  logoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  logoIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    backgroundColor: "#2D6A4F",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  title: {
+    fontSize: 16,
+    fontFamily: "Inter_700Bold",
+    color: "#fff",
+  },
+  signOutBtn: {
+    padding: 6,
+  },
+});
+
+const bottomBar = StyleSheet.create({
+  container: {
+    flexDirection: "row",
+    backgroundColor: "#fff",
+    borderTopWidth: 1,
+    borderTopColor: "#E5E7EB",
+    paddingTop: 8,
+  },
+  tab: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 6,
+    gap: 3,
+  },
+  label: {
+    fontSize: 10,
+    fontFamily: "Inter_500Medium",
+    color: "#9CA3AF",
+  },
+  labelActive: {
+    color: "#2D6A4F",
+    fontFamily: "Inter_600SemiBold",
   },
 });
 
