@@ -24,7 +24,7 @@ interface AiSearchRequest {
 
 router.post("/ai-search", async (req, res) => {
   const { query, services }: AiSearchRequest = req.body ?? {};
-
+  console.log("Incoming request:", { query, services });
   if (!query?.trim()) {
     res.json({ summary: "", match_ids: [], external: [] });
     return;
@@ -65,12 +65,47 @@ Respond ONLY with valid JSON in this exact format:
         { role: "system", content: systemPrompt },
         { role: "user", content: query },
       ],
-      response_format: { type: "json_object" },
+      response_format: {
+  type: "json_schema",
+  json_schema: {
+    name: "ai_search_response",
+    schema: {
+      type: "object",
+      properties: {
+        summary: { type: "string" },
+        match_ids: {
+          type: "array",
+          items: { type: "string" }
+        },
+        external: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              name: { type: "string" },
+              description: { type: "string" },
+              where_to_find: { type: "string" }
+            },
+            required: ["name", "description", "where_to_find"]
+          }
+        }
+      },
+      required: ["summary", "match_ids", "external"]
+    }
+  }
+},
       max_completion_tokens: 512,
     });
 
     const raw = completion.choices[0]?.message?.content ?? "{}";
-    const parsed = JSON.parse(raw);
+
+    let parsed;
+    try {
+      parsed = JSON.parse(raw);
+    } catch (e) {
+      console.warn("[ai-search] Invalid JSON from AI:", raw);
+      parsed = {};
+    }
 
     res.json({
       summary: parsed.summary ?? "",
@@ -121,7 +156,7 @@ Answer the farmer's question using the module content as your primary reference.
 
   try {
     const completion = await openai.chat.completions.create({
-      model: "gpt-5-mini",
+      model: "gpt-4o-mini",
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: question },
@@ -130,10 +165,13 @@ Answer the farmer's question using the module content as your primary reference.
     });
 
     const answer = completion.choices[0]?.message?.content ?? "I could not generate an answer right now. Please try again.";
+    
     res.json({ answer });
+    
   } catch (err) {
     console.error("[module-assist] OpenAI error:", err);
     res.status(500).json({ answer: "I'm having trouble connecting right now. Please try again in a moment." });
+    
   }
 });
 

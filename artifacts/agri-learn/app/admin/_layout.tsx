@@ -550,7 +550,7 @@ export default function AdminLayout() {
             <View style={mobileHeader.logoIcon}>
               <Feather name="feather" size={14} color="#fff" />
             </View>
-            <Text style={mobileHeader.logoTitle}>AgriLearn</Text>
+            <Text style={mobileHeader.title}>AgriLearn</Text>
             <Text style={mobileHeader.badge}>Admin</Text>
           </View>
         </View>
@@ -709,6 +709,16 @@ const mobileHeader = StyleSheet.create({
     fontSize: 16,
     fontFamily: "Inter_700Bold",
     color: "#fff",
+  },
+  badge: {
+    fontSize: 10,
+    fontFamily: "Inter_700Bold",
+    color: "#2D6A4F",
+    backgroundColor: "#fff",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    marginLeft: 4,
   },
   signOutBtn: {
     padding: 6,
@@ -952,42 +962,5 @@ const bottomNav = StyleSheet.create({
   tabLabelActive: {
     color: SIDEBAR_ACTIVE,
     fontFamily: "Inter_600SemiBold",
-  },
-});
-
-const mobileHeader = StyleSheet.create({
-  bar: {
-    backgroundColor: SIDEBAR_BG,
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-  },
-  logoRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  logoIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
-    backgroundColor: SIDEBAR_ACTIVE,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  logoTitle: {
-    fontSize: 16,
-    fontFamily: "Inter_700Bold",
-    color: "#fff",
-  },
-  badge: {
-    fontSize: 11,
-    fontFamily: "Inter_600SemiBold",
-    color: SIDEBAR_ACTIVE,
-    backgroundColor: "rgba(82,183,136,0.2)",
-    borderRadius: 6,
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    marginLeft: 4,
-    overflow: "hidden",
   },
 });

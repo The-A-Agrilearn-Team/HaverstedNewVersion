@@ -31,7 +31,7 @@ export async function aiSearchServices(
   }));
 
   try {
-    const response = await fetch("/api/ai-search", {
+    const response = await fetch("http://localhost:3000/api/ai-search", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ query, services: servicesSummary }),
@@ -67,7 +67,7 @@ export async function askModuleAssistant(
   if (!question.trim()) return "";
 
   try {
-    const response = await fetch("/api/module-assist", {
+    const response = await fetch("http://localhost:3000/api/module-assist", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ question, moduleTitle, moduleContent }),

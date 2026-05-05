@@ -1,5 +1,10 @@
 import app from "./app";
+import cors from "cors";
 import { logger } from "./lib/logger";
+import aiRoutes from "./routes/ai-search";
+
+app.use(cors());
+app.use("/api", aiRoutes);
 
 const rawPort = process.env["PORT"] || "3000";
 const port = Number(rawPort);
