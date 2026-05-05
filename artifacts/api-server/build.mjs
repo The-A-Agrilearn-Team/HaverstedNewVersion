@@ -100,6 +100,10 @@ async function buildAll() {
       "puppeteer",
       "puppeteer-core",
       "electron",
+      // LangChain and related packages — complex ESM/dynamic imports, must stay external
+      "@langchain/*",
+      "langchain",
+      "duck-duck-scrape",
     ],
     sourcemap: "linked",
     plugins: [

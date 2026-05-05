@@ -208,16 +208,47 @@ export default function ServiceWindowScreen() {
             <Text style={styles.externalSubtitle}>
               These services aren&apos;t in the app yet, but you can find them here:
             </Text>
-            {aiResult.externalSuggestions.map((ext, i) => (
-              <View key={i} style={styles.externalCard}>
-                <Text style={styles.externalName}>{ext.name}</Text>
-                <Text style={styles.externalDesc}>{ext.description}</Text>
-                <View style={styles.externalWhere}>
-                  <Feather name="map-pin" size={12} color={C.primary} />
-                  <Text style={styles.externalWhereText}>{ext.where_to_find}</Text>
-                </View>
-              </View>
-            ))}
+            {aiResult.externalSuggestions.map((ext, i) => {
+              const isUrl =
+                ext.where_to_find.startsWith("http://") ||
+                ext.where_to_find.startsWith("https://");
+              return (
+                <Pressable
+                  key={i}
+                  style={({ pressed }) => [styles.externalCard, { opacity: pressed ? 0.85 : 1 }]}
+                  onPress={() => {
+                    if (isUrl) {
+                      Haptics.selectionAsync();
+                      Linking.openURL(ext.where_to_find);
+                    }
+                  }}
+                >
+                  <Text style={styles.externalName}>{ext.name}</Text>
+                  <Text style={styles.externalDesc}>{ext.description}</Text>
+                  <View style={styles.externalWhere}>
+                    <Feather
+                      name={isUrl ? "external-link" : "map-pin"}
+                      size={12}
+                      color={C.primary}
+                    />
+                    <Text
+                      style={[
+                        styles.externalWhereText,
+                        isUrl && styles.externalLink,
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {isUrl
+                        ? ext.where_to_find.replace(/^https?:\/\//, "").split("/")[0]
+                        : ext.where_to_find}
+                    </Text>
+                    {isUrl && (
+                      <Text style={styles.tapHint}>Tap to open</Text>
+                    )}
+                  </View>
+                </Pressable>
+              );
+            })}
           </View>
         )}
       </ScrollView>
@@ -368,5 +399,7 @@ const styles = StyleSheet.create({
   externalName: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: C.text },
   externalDesc: { fontSize: 12, fontFamily: "Inter_400Regular", color: C.textSecondary, lineHeight: 18 },
   externalWhere: { flexDirection: "row", alignItems: "center", gap: 4 },
-  externalWhereText: { fontSize: 12, fontFamily: "Inter_500Medium", color: C.primary },
+  externalWhereText: { fontSize: 12, fontFamily: "Inter_500Medium", color: C.primary, flex: 1 },
+  externalLink: { textDecorationLine: "underline" },
+  tapHint: { fontSize: 10, fontFamily: "Inter_400Regular", color: C.textTertiary, marginLeft: 4 },
 });
