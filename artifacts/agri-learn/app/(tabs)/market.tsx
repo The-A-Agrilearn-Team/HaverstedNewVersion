@@ -1,5 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import { Image } from "expo-image";
 import { router } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -15,7 +16,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "@/context/AuthContext";
 import Colors from "@/constants/colors";
-import { useListings } from "@/hooks/useListings";
+import { useListings, useMyListings } from "@/hooks/useListings";
 
 const C = Colors.light;
 
@@ -35,19 +36,28 @@ export default function MarketScreen() {
   const { user, profile } = useAuth();
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState("All");
+  const [viewMode, setViewMode] = useState<"all" | "mine">("all");
+
+  const isFarmer = user && (profile?.role === "farmer" || profile?.role === "admin");
 
   const { data: allListings = [], isLoading, refetch } = useListings();
+  const { data: myListings = [], isLoading: myLoading, refetch: myRefetch } = useMyListings(
+    isFarmer ? user?.id : undefined
+  );
 
-  const filtered = allListings.filter((l) => {
+  const sourceListings = viewMode === "mine" ? myListings : allListings;
+  const sourceLoading = viewMode === "mine" ? myLoading : isLoading;
+
+  const filtered = sourceListings.filter((l) => {
     const matchSearch =
       l.title.toLowerCase().includes(search.toLowerCase()) ||
       l.location.toLowerCase().includes(search.toLowerCase()) ||
-      (l.farmer_name ?? "").toLowerCase().includes(search.toLowerCase());
+      ((l as any).farmer_name ?? "").toLowerCase().includes(search.toLowerCase());
     const matchFilter = activeFilter === "All" || l.category === activeFilter;
     return matchSearch && matchFilter;
   });
 
-  const canList = user && (profile?.role === "farmer" || profile?.role === "admin");
+  const canList = isFarmer;
 
   return (
     <View style={{ flex: 1, backgroundColor: C.background }}>
@@ -56,7 +66,11 @@ export default function MarketScreen() {
           <View>
             <Text style={styles.pageTitle}>Marketplace</Text>
             <Text style={styles.pageSubtitle}>
-              {isLoading ? "Loading..." : `${allListings.length} product${allListings.length !== 1 ? "s" : ""} available`}
+              {sourceLoading
+                ? "Loading..."
+                : viewMode === "mine"
+                ? `${filtered.length} of your listing${filtered.length !== 1 ? "s" : ""}`
+                : `${allListings.length} product${allListings.length !== 1 ? "s" : ""} available`}
             </Text>
           </View>
           {canList && (
@@ -72,6 +86,29 @@ export default function MarketScreen() {
             </Pressable>
           )}
         </View>
+
+        {isFarmer && (
+          <View style={styles.viewToggle}>
+            <Pressable
+              style={[styles.toggleBtn, viewMode === "all" && styles.toggleBtnActive]}
+              onPress={() => { setViewMode("all"); Haptics.selectionAsync(); }}
+            >
+              <Feather name="shopping-bag" size={14} color={viewMode === "all" ? "#fff" : C.textSecondary} />
+              <Text style={[styles.toggleBtnText, viewMode === "all" && styles.toggleBtnTextActive]}>
+                All Products
+              </Text>
+            </Pressable>
+            <Pressable
+              style={[styles.toggleBtn, viewMode === "mine" && styles.toggleBtnActive]}
+              onPress={() => { setViewMode("mine"); Haptics.selectionAsync(); }}
+            >
+              <Feather name="user" size={14} color={viewMode === "mine" ? "#fff" : C.textSecondary} />
+              <Text style={[styles.toggleBtnText, viewMode === "mine" && styles.toggleBtnTextActive]}>
+                My Listings
+              </Text>
+            </Pressable>
+          </View>
+        )}
         <View style={styles.searchBox}>
           <Feather name="search" size={18} color={C.textSecondary} />
           <TextInput
@@ -112,19 +149,31 @@ export default function MarketScreen() {
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={false} onRefresh={refetch} tintColor={C.primary} />}
+        refreshControl={
+          <RefreshControl
+            refreshing={sourceLoading}
+            onRefresh={() => { refetch(); myRefetch(); }}
+            tintColor={C.primary}
+          />
+        }
         contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 100, gap: 12 }}
       >
-        {isLoading ? (
+        {sourceLoading ? (
           <View style={styles.loadingState}>
             <ActivityIndicator size="large" color={C.primary} />
             <Text style={styles.loadingText}>Loading listings...</Text>
           </View>
         ) : filtered.length === 0 ? (
           <View style={styles.emptyState}>
-            <Feather name="shopping-bag" size={40} color={C.textTertiary} />
-            <Text style={styles.emptyTitle}>No products found</Text>
-            <Text style={styles.emptyText}>Try a different search or category</Text>
+            <Feather name={viewMode === "mine" ? "user" : "shopping-bag"} size={40} color={C.textTertiary} />
+            <Text style={styles.emptyTitle}>
+              {viewMode === "mine" ? "No listings yet" : "No products found"}
+            </Text>
+            <Text style={styles.emptyText}>
+              {viewMode === "mine"
+                ? "Tap + List to create your first listing"
+                : "Try a different search or category"}
+            </Text>
           </View>
         ) : (
           filtered.map((item) => (
@@ -136,9 +185,20 @@ export default function MarketScreen() {
                 router.push(`/product/${item.id}`);
               }}
             >
-              <View style={[styles.listingIcon, { backgroundColor: `${C.primary}12` }]}>
-                <Feather name={(CATEGORY_ICONS[item.category] ?? "package") as any} size={26} color={C.primary} />
-              </View>
+              {item.image_url ? (
+                <View style={styles.listingThumb}>
+                  <Image
+                    source={{ uri: item.image_url }}
+                    style={styles.listingThumbImg}
+                    contentFit="cover"
+                    transition={200}
+                  />
+                </View>
+              ) : (
+                <View style={[styles.listingIcon, { backgroundColor: `${C.primary}12` }]}>
+                  <Feather name={(CATEGORY_ICONS[item.category] ?? "package") as any} size={26} color={C.primary} />
+                </View>
+              )}
               <View style={{ flex: 1 }}>
                 <View style={styles.listingTop}>
                   <Text style={styles.listingTitle}>{item.title}</Text>
@@ -149,10 +209,12 @@ export default function MarketScreen() {
                 </View>
                 <Text style={styles.listingDesc} numberOfLines={2}>{item.description}</Text>
                 <View style={styles.listingMeta}>
-                  <View style={styles.metaChip}>
-                    <Feather name="user" size={11} color={C.textSecondary} />
-                    <Text style={styles.metaText}>{item.farmer_name}</Text>
-                  </View>
+                  {viewMode !== "mine" && (item as any).farmer_name && (
+                    <View style={styles.metaChip}>
+                      <Feather name="user" size={11} color={C.textSecondary} />
+                      <Text style={styles.metaText}>{(item as any).farmer_name}</Text>
+                    </View>
+                  )}
                   <View style={styles.metaChip}>
                     <Feather name="map-pin" size={11} color={C.textSecondary} />
                     <Text style={styles.metaText}>{item.location}</Text>
@@ -161,6 +223,12 @@ export default function MarketScreen() {
                     <Feather name="package" size={11} color={C.textSecondary} />
                     <Text style={styles.metaText}>{item.quantity} {item.unit}</Text>
                   </View>
+                  {item.image_url && (
+                    <View style={styles.metaChip}>
+                      <Feather name="camera" size={11} color={C.primary} />
+                      <Text style={[styles.metaText, { color: C.primary }]}>Photo</Text>
+                    </View>
+                  )}
                 </View>
               </View>
             </Pressable>
@@ -236,6 +304,24 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: C.border,
   },
+  viewToggle: {
+    flexDirection: "row",
+    backgroundColor: C.surfaceSecondary,
+    borderRadius: 12,
+    padding: 4,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: C.border,
+  },
+  toggleBtn: {
+    flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center",
+    gap: 6, paddingVertical: 8, borderRadius: 9,
+  },
+  toggleBtnActive: { backgroundColor: C.primary },
+  toggleBtnText: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: C.textSecondary },
+  toggleBtnTextActive: { color: "#fff" },
+  listingThumb: { width: 56, height: 56, borderRadius: 14, overflow: "hidden" },
+  listingThumbImg: { width: 56, height: 56, borderRadius: 14 },
   listingIcon: { width: 56, height: 56, borderRadius: 14, alignItems: "center", justifyContent: "center" },
   listingTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 },
   listingTitle: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: C.text, flex: 1, marginRight: 8 },

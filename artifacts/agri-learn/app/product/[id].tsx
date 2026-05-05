@@ -1,5 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import { Image } from "expo-image";
 import { router, useLocalSearchParams } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import React, { useState } from "react";
@@ -16,6 +17,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Colors from "@/constants/colors";
 import { supabase, ProductListing } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
+import { useSendNotification } from "@/hooks/useNotifications";
 
 const C = Colors.light;
 
@@ -55,12 +57,14 @@ function useSingleListing(id: string) {
 export default function ProductDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
+  const isFarmer = profile?.role === "farmer" || profile?.role === "admin";
   const [contacted, setContacted] = useState(false);
+  const sendNotification = useSendNotification();
 
   const { data: item, isLoading } = useSingleListing(id ?? "1");
 
-  const handleContact = () => {
+  const handleContact = async () => {
     if (!user) {
       Alert.alert("Sign In Required", "Please sign in to contact the seller.", [
         { text: "Cancel", style: "cancel" },
@@ -68,13 +72,24 @@ export default function ProductDetailScreen() {
       ]);
       return;
     }
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    setContacted(true);
-    Alert.alert(
-      "Request Sent",
-      `Your interest in "${item?.title}" has been sent to ${item?.farmer_name}. They will contact you shortly.`,
-      [{ text: "OK" }]
-    );
+    if (!item) return;
+
+    try {
+      await sendNotification.mutateAsync({
+        farmerId: item.farmer_id,
+        listingId: item.id,
+        listingTitle: item.title,
+      });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setContacted(true);
+      Alert.alert(
+        "Request Sent",
+        `Your interest in "${item.title}" has been sent to ${item.farmer_name}. They will contact you shortly.`,
+        [{ text: "OK" }]
+      );
+    } catch {
+      Alert.alert("Error", "Could not send your request. Please try again.");
+    }
   };
 
   if (isLoading || !item) {
@@ -112,7 +127,18 @@ export default function ProductDetailScreen() {
         contentContainerStyle={{ paddingBottom: insets.bottom + 120 }}
       >
         <View style={styles.imageBox}>
-          <Feather name="package" size={52} color={C.primary} />
+          {item.image_url ? (
+            <Image
+              source={{ uri: item.image_url }}
+              style={styles.productImage}
+              contentFit="cover"
+              transition={300}
+            />
+          ) : (
+            <View style={styles.imagePlaceholder}>
+              <Feather name="package" size={52} color={C.primary} />
+            </View>
+          )}
           <View style={styles.statusBadge}>
             <View style={styles.statusDot} />
             <Text style={styles.statusText}>Available</Text>
@@ -192,22 +218,29 @@ export default function ProductDetailScreen() {
         </View>
       </ScrollView>
 
-      <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
-        <Pressable
-          style={({ pressed }) => [
-            styles.contactBtn,
-            contacted && styles.contactedBtn,
-            { opacity: pressed ? 0.85 : 1 },
-          ]}
-          onPress={handleContact}
-          disabled={contacted}
-        >
-          <Feather name={contacted ? "check" : "message-circle"} size={20} color="#fff" />
-          <Text style={styles.contactBtnText}>
-            {contacted ? "Request Sent" : "Contact Seller"}
-          </Text>
-        </Pressable>
-      </View>
+      {!isFarmer && (
+        <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.contactBtn,
+              contacted && styles.contactedBtn,
+              (contacted || sendNotification.isPending) && { opacity: 0.8 },
+              { opacity: pressed ? 0.85 : 1 },
+            ]}
+            onPress={handleContact}
+            disabled={contacted || sendNotification.isPending}
+          >
+            {sendNotification.isPending ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Feather name={contacted ? "check" : "message-circle"} size={20} color="#fff" />
+            )}
+            <Text style={styles.contactBtnText}>
+              {sendNotification.isPending ? "Sending..." : contacted ? "Request Sent" : "Contact Seller"}
+            </Text>
+          </Pressable>
+        </View>
+      )}
     </View>
   );
 }
@@ -218,7 +251,9 @@ const styles = StyleSheet.create({
   },
   navBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: C.surfaceSecondary, alignItems: "center", justifyContent: "center" },
   navTitle: { fontSize: 16, fontFamily: "Inter_600SemiBold", color: C.text },
-  imageBox: { height: 200, backgroundColor: `${C.primary}10`, alignItems: "center", justifyContent: "center", marginHorizontal: 20, borderRadius: 20, marginBottom: 20, position: "relative" },
+  imageBox: { height: 220, marginHorizontal: 20, borderRadius: 20, marginBottom: 20, position: "relative", overflow: "hidden" },
+  productImage: { width: "100%", height: "100%", borderRadius: 20 },
+  imagePlaceholder: { flex: 1, backgroundColor: `${C.primary}10`, alignItems: "center", justifyContent: "center", borderRadius: 20 },
   statusBadge: { position: "absolute", top: 14, right: 14, flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: "#fff", borderRadius: 20, paddingHorizontal: 10, paddingVertical: 5 },
   statusDot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: C.success },
   statusText: { fontSize: 12, fontFamily: "Inter_600SemiBold", color: C.success },

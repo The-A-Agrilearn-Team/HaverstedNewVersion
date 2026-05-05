@@ -35,6 +35,9 @@ export default function RegisterScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [verificationSent, setVerificationSent] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState("");
 
   const handleRegister = async () => {
     if (!fullName || !email || !password) {
@@ -43,6 +46,10 @@ export default function RegisterScreen() {
     }
     if (password.length < 6) {
       setError("Password must be at least 6 characters");
+      return;
+    }
+    if (!termsAccepted) {
+      setError("Please accept the Terms and Conditions to continue");
       return;
     }
     setError("");
@@ -55,9 +62,48 @@ export default function RegisterScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } else {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      router.dismissAll();
+      setRegisteredEmail(email.trim().toLowerCase());
+      setVerificationSent(true);
     }
   };
+
+  if (verificationSent) {
+    return (
+      <View
+        style={[
+          styles.verifyContainer,
+          { paddingTop: insets.top + 32, paddingBottom: insets.bottom + 24 },
+        ]}
+      >
+        <View style={styles.verifyIconCircle}>
+          <Feather name="mail" size={36} color={C.primary} />
+        </View>
+        <Text style={styles.verifyTitle}>Check your email</Text>
+        <Text style={styles.verifySubtitle}>
+          We sent a verification link to{"\n"}
+          <Text style={{ color: C.primary, fontFamily: "Inter_600SemiBold" }}>
+            {registeredEmail}
+          </Text>
+          {"\n\n"}
+          Open the link in your email to confirm your account, then come back here to sign in.
+        </Text>
+        <Pressable
+          style={({ pressed }) => [styles.primaryButton, { opacity: pressed ? 0.85 : 1 }]}
+          onPress={() => router.replace("/(auth)/login")}
+        >
+          <Text style={styles.primaryButtonText}>Go to Sign In</Text>
+        </Pressable>
+        <Pressable
+          style={({ pressed }) => [styles.linkButton, { opacity: pressed ? 0.6 : 1, marginTop: 8 }]}
+          onPress={() => setVerificationSent(false)}
+        >
+          <Text style={styles.linkText}>
+            Wrong email? <Text style={{ color: C.primary }}>Try again</Text>
+          </Text>
+        </Pressable>
+      </View>
+    );
+  }
 
   return (
     <KeyboardAvoidingView
@@ -169,6 +215,27 @@ export default function RegisterScreen() {
           </View>
 
           <Pressable
+            style={styles.termsRow}
+            onPress={() => {
+              setTermsAccepted(!termsAccepted);
+              Haptics.selectionAsync();
+            }}
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: termsAccepted }}
+          >
+            <View style={[styles.checkbox, termsAccepted && styles.checkboxChecked]}>
+              {termsAccepted && <Feather name="check" size={13} color="#fff" />}
+            </View>
+            <Text style={styles.termsText}>
+              I consent to my personal information being used{" "}
+              <Text style={styles.termsHighlight}>only for AgriLearn purposes</Text>. If my details
+              ever need to be shared with a third party, I will be{" "}
+              <Text style={styles.termsHighlight}>notified in advance</Text>, in compliance with
+              the POPI Act.
+            </Text>
+          </Pressable>
+
+          <Pressable
             style={({ pressed }) => [
               styles.primaryButton,
               { opacity: pressed || loading ? 0.85 : 1 },
@@ -241,6 +308,43 @@ const styles = StyleSheet.create({
   roleLabel: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: C.textSecondary },
   roleLabelSelected: { color: C.primary },
   roleDesc: { fontSize: 10, fontFamily: "Inter_400Regular", color: C.textTertiary, textAlign: "center" },
+  termsRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
+    backgroundColor: `${C.primary}08`,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: `${C.primary}30`,
+    padding: 14,
+  },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: C.border,
+    backgroundColor: C.surface,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 1,
+    flexShrink: 0,
+  },
+  checkboxChecked: {
+    backgroundColor: C.primary,
+    borderColor: C.primary,
+  },
+  termsText: {
+    flex: 1,
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    color: C.textSecondary,
+    lineHeight: 19,
+  },
+  termsHighlight: {
+    fontFamily: "Inter_600SemiBold",
+    color: C.text,
+  },
   primaryButton: {
     backgroundColor: C.primary,
     borderRadius: 14,
@@ -251,4 +355,35 @@ const styles = StyleSheet.create({
   primaryButtonText: { color: "#fff", fontSize: 16, fontFamily: "Inter_600SemiBold" },
   linkButton: { alignItems: "center", paddingVertical: 4 },
   linkText: { fontSize: 14, fontFamily: "Inter_400Regular", color: C.textSecondary },
+  verifyContainer: {
+    flex: 1,
+    backgroundColor: C.background,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 32,
+  },
+  verifyIconCircle: {
+    width: 88,
+    height: 88,
+    borderRadius: 24,
+    backgroundColor: `${C.primary}18`,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 24,
+  },
+  verifyTitle: {
+    fontSize: 26,
+    fontFamily: "Inter_700Bold",
+    color: C.text,
+    textAlign: "center",
+    marginBottom: 12,
+  },
+  verifySubtitle: {
+    fontSize: 15,
+    fontFamily: "Inter_400Regular",
+    color: C.textSecondary,
+    textAlign: "center",
+    lineHeight: 22,
+    marginBottom: 32,
+  },
 });

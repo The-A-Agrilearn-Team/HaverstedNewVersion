@@ -97,6 +97,60 @@ export default function ModuleDetailScreen() {
   const insets = useSafeAreaInsets();
   const { user, profile } = useAuth();
 
+  const role = profile?.role ?? "";
+  const canAccess = role === "farmer" || role === "admin";
+
+  if (!user) {
+    return (
+      <View style={{ flex: 1, backgroundColor: C.background, alignItems: "center", justifyContent: "center", padding: 32 }}>
+        <View style={{ width: 80, height: 80, borderRadius: 24, backgroundColor: "#D1FAE5", alignItems: "center", justifyContent: "center", marginBottom: 24 }}>
+          <Feather name="book-open" size={36} color="#2D6A4F" />
+        </View>
+        <Text style={{ fontSize: 24, fontFamily: "Inter_700Bold", color: C.text, marginBottom: 10, textAlign: "center" }}>
+          Farmers Only
+        </Text>
+        <Text style={{ fontSize: 15, fontFamily: "Inter_400Regular", color: C.textSecondary, textAlign: "center", lineHeight: 23, marginBottom: 32 }}>
+          Learning modules are exclusively available to registered farmers. Create a farmer account to access this content.
+        </Text>
+        <Pressable
+          style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1, backgroundColor: "#2D6A4F", borderRadius: 14, paddingHorizontal: 28, paddingVertical: 14, width: "100%", alignItems: "center" })}
+          onPress={() => router.replace("/(auth)/register")}
+        >
+          <Text style={{ fontSize: 16, fontFamily: "Inter_600SemiBold", color: "#fff" }}>Register as a Farmer</Text>
+        </Pressable>
+        <Pressable
+          style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1, marginTop: 14, paddingVertical: 10 })}
+          onPress={() => router.replace("/(auth)/login")}
+        >
+          <Text style={{ fontSize: 14, fontFamily: "Inter_500Medium", color: C.primary }}>Already have an account? Sign in</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+  if (!canAccess) {
+    return (
+      <View style={{ flex: 1, backgroundColor: C.background, alignItems: "center", justifyContent: "center", padding: 32 }}>
+        <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: "#D1FAE5", alignItems: "center", justifyContent: "center", marginBottom: 20 }}>
+          <Feather name="lock" size={32} color="#2D6A4F" />
+        </View>
+        <Text style={{ fontSize: 20, fontFamily: "Inter_700Bold", color: C.text, marginBottom: 8, textAlign: "center" }}>
+          Access Restricted
+        </Text>
+        <Text style={{ fontSize: 14, fontFamily: "Inter_400Regular", color: C.textSecondary, textAlign: "center", lineHeight: 22, marginBottom: 28 }}>
+          Learning modules are only available to farmers and admins. Your account type ({role}) does not have access.
+        </Text>
+        <Pressable
+          style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1, backgroundColor: "#2D6A4F", borderRadius: 12, paddingHorizontal: 24, paddingVertical: 13, flexDirection: "row", alignItems: "center", gap: 8 })}
+          onPress={() => router.back()}
+        >
+          <Feather name="arrow-left" size={16} color="#fff" />
+          <Text style={{ fontSize: 15, fontFamily: "Inter_600SemiBold", color: "#fff" }}>Go Back</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
   const { data: mod, isLoading } = useSingleModule(id ?? "1");
   const { data: bookmarkedIds = [] } = useBookmarks();
   const toggleBookmark = useToggleBookmark();

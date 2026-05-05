@@ -11,16 +11,19 @@ import {
   StyleSheet,
   Text,
   View,
+  useWindowDimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "@/context/AuthContext";
 import Colors from "@/constants/colors";
 import { useProfileStats } from "@/hooks/useProgress";
+import { useUnreadCount } from "@/hooks/useNotifications";
 
 const C = Colors.light;
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
+  const { height } = useWindowDimensions();
   const { user, profile, signOut, refreshProfile } = useAuth();
 
   useFocusEffect(
@@ -30,6 +33,7 @@ export default function ProfileScreen() {
   );
 
   const { data: stats = { completed: 0, bookmarks: 0, listings: 0 } } = useProfileStats();
+  const { data: unreadMessages = 0 } = useUnreadCount();
 
   const handleSignOut = () => {
     if (Platform.OS === "web") {
@@ -53,7 +57,15 @@ export default function ProfileScreen() {
 
   if (!user) {
     return (
-      <View style={[styles.guestContainer, { paddingTop: insets.top + 60 }]}>
+      <ScrollView
+        style={{ flex: 1, backgroundColor: C.background }}
+        contentContainerStyle={[
+          styles.guestContainer,
+          { minHeight: height, paddingTop: insets.top + 60, paddingBottom: insets.bottom + 40 },
+        ]}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
         <View style={styles.guestIconBox}>
           <Feather name="user" size={40} color={C.primary} />
         </View>
@@ -76,7 +88,7 @@ export default function ProfileScreen() {
         >
           <Text style={styles.registerBtnText}>Create Account</Text>
         </Pressable>
-      </View>
+      </ScrollView>
     );
   }
 
@@ -121,49 +133,91 @@ export default function ProfileScreen() {
         )}
       </View>
 
-      <View style={styles.statsRow}>
-        <View style={styles.stat}>
-          <Text style={styles.statNum}>{stats.completed}</Text>
-          <Text style={styles.statLbl}>Completed</Text>
+      {profile?.role !== "buyer" && (
+        <View style={styles.statsRow}>
+          <View style={styles.stat}>
+            <Text style={styles.statNum}>{stats.completed}</Text>
+            <Text style={styles.statLbl}>Completed</Text>
+          </View>
+          <View style={[styles.stat, styles.statBorder]}>
+            <Text style={styles.statNum}>{stats.bookmarks}</Text>
+            <Text style={styles.statLbl}>Bookmarks</Text>
+          </View>
+          <View style={styles.stat}>
+            <Text style={styles.statNum}>{stats.listings}</Text>
+            <Text style={styles.statLbl}>Listings</Text>
+          </View>
         </View>
-        <View style={[styles.stat, styles.statBorder]}>
-          <Text style={styles.statNum}>{stats.bookmarks}</Text>
-          <Text style={styles.statLbl}>Bookmarks</Text>
-        </View>
-        <View style={styles.stat}>
-          <Text style={styles.statNum}>{stats.listings}</Text>
-          <Text style={styles.statLbl}>Listings</Text>
-        </View>
-      </View>
+      )}
 
       <View style={styles.section}>
         <Text style={styles.sectionLabel}>Account</Text>
         <View style={styles.menuGroup}>
           <MenuRow icon="user" label="Personal Information" onPress={() => router.push("/profile/edit")} />
           <MenuRow icon="map-pin" label="Location" value={profile?.location ?? "Not set"} onPress={() => router.push("/profile/edit")} />
-          <MenuRow icon="globe" label="Language" value={profile?.language_preference ?? "English"} onPress={() => router.push("/profile/edit")} last />
+          <MenuRow icon="globe" label="Language" value={profile?.language_pref ?? "English"} onPress={() => router.push("/profile/edit")} last />
         </View>
       </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionLabel}>Learning</Text>
-        <View style={styles.menuGroup}>
-          <MenuRow icon="bookmark" label="Saved Modules" badge={stats.bookmarks > 0 ? String(stats.bookmarks) : undefined} />
-          <MenuRow icon="award" label="My Progress" badge={stats.completed > 0 ? `${stats.completed} done` : undefined} />
-          <MenuRow icon="download" label="Offline Content" last />
-        </View>
-      </View>
-
-      {(profile?.role === "farmer" || profile?.role === "admin") && (
+      {profile?.role !== "buyer" && (
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Marketplace</Text>
+          <Text style={styles.sectionLabel}>Learning</Text>
           <View style={styles.menuGroup}>
-            <MenuRow icon="package" label="My Listings" badge={stats.listings > 0 ? String(stats.listings) : undefined} />
-            <MenuRow icon="message-circle" label="Messages" />
-            <MenuRow icon="plus-circle" label="Create New Listing" onPress={() => router.push("/listing/create")} last />
+            <MenuRow
+              icon="bookmark"
+              label="Saved Modules"
+              badge={stats.bookmarks > 0 ? String(stats.bookmarks) : undefined}
+              onPress={() => router.push("/profile/saved-modules" as any)}
+            />
+            <MenuRow
+              icon="award"
+              label="My Progress"
+              badge={stats.completed > 0 ? `${stats.completed} done` : undefined}
+              onPress={() => router.push("/profile/my-progress" as any)}
+            />
+            <MenuRow
+              icon="download"
+              label="Offline Content"
+              onPress={() => router.push("/profile/offline-content" as any)}
+              last
+            />
           </View>
         </View>
       )}
+
+      <View style={styles.section}>
+        <Text style={styles.sectionLabel}>Marketplace</Text>
+        <View style={styles.menuGroup}>
+          {profile?.role === "buyer" ? (
+            <>
+              <MenuRow icon="shopping-bag" label="Browse Listings" onPress={() => router.push("/(tabs)/market")} />
+              <MenuRow
+                icon="message-circle"
+                label="Messages"
+                badge={unreadMessages > 0 ? String(unreadMessages) : undefined}
+                onPress={() => router.push("/profile/messages" as any)}
+                last
+              />
+            </>
+          ) : (
+            <>
+              <MenuRow
+                icon="package"
+                label="My Listings"
+                badge={stats.listings > 0 ? String(stats.listings) : undefined}
+                onPress={() => router.push("/profile/my-listings" as any)}
+              />
+              <MenuRow
+                icon="message-circle"
+                label="Messages"
+                badge={unreadMessages > 0 ? String(unreadMessages) : undefined}
+                onPress={() => router.push("/profile/messages" as any)}
+              />
+              <MenuRow icon="plus-circle" label="Create New Listing" onPress={() => router.push("/listing/create")} last />
+            </>
+          )}
+        </View>
+      </View>
 
       {profile?.role === "admin" && (
         <View style={styles.section}>
@@ -186,9 +240,9 @@ export default function ProfileScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionLabel}>Support</Text>
         <View style={styles.menuGroup}>
-          <MenuRow icon="help-circle" label="Help & FAQ" />
-          <MenuRow icon="shield" label="Privacy Policy" />
-          <MenuRow icon="file-text" label="Terms of Service" last />
+          <MenuRow icon="help-circle" label="Help & FAQ" onPress={() => router.push("/support/faq")} />
+          <MenuRow icon="shield" label="Privacy Policy" onPress={() => router.push("/support/privacy")} />
+          <MenuRow icon="file-text" label="Terms of Service" onPress={() => router.push("/support/terms")} last />
         </View>
       </View>
 
@@ -243,7 +297,11 @@ function MenuRow({
 
 const styles = StyleSheet.create({
   guestContainer: {
-    flex: 1, backgroundColor: C.background, alignItems: "center", paddingHorizontal: 32, gap: 16,
+    backgroundColor: C.background,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 32,
+    gap: 16,
   },
   guestIconBox: {
     width: 96, height: 96, borderRadius: 48, backgroundColor: `${C.primary}12`, alignItems: "center", justifyContent: "center", marginBottom: 8,

@@ -26,6 +26,37 @@ const ROLE_LABELS: Record<string, string> = {
   retailer: "Retailer",
 };
 
+function GuestBlock() {
+  const insets = useSafeAreaInsets();
+  return (
+    <View style={[styles.deniedContainer, { paddingTop: insets.top + 40 }]}>
+      <View style={styles.deniedIconBox}>
+        <Feather name="book-open" size={36} color="#2D6A4F" />
+      </View>
+      <Text style={styles.deniedTitle}>Learning Hub</Text>
+      <Text style={styles.deniedSubtitle}>Register as a farmer to access learning content</Text>
+      <Text style={styles.deniedBody}>
+        AgriLearn's Learning Hub is exclusively available to registered farmers. It provides
+        practical training on crops, soil, irrigation, pest control, livestock, and more.
+      </Text>
+      <View style={styles.deniedDivider} />
+      <Pressable
+        style={({ pressed }) => [styles.marketBtn, { opacity: pressed ? 0.85 : 1 }]}
+        onPress={() => router.push("/(auth)/register")}
+      >
+        <Feather name="user-plus" size={16} color="#fff" />
+        <Text style={styles.marketBtnText}>Register as a Farmer</Text>
+      </Pressable>
+      <Pressable
+        style={({ pressed }) => [styles.signInLink, { opacity: pressed ? 0.7 : 1 }]}
+        onPress={() => router.push("/(auth)/login")}
+      >
+        <Text style={styles.signInLinkText}>Already have an account? Sign in</Text>
+      </Pressable>
+    </View>
+  );
+}
+
 function AccessDenied({ role }: { role: string }) {
   const insets = useSafeAreaInsets();
   return (
@@ -56,7 +87,7 @@ function AccessDenied({ role }: { role: string }) {
 
 export default function LearnScreen() {
   const insets = useSafeAreaInsets();
-  const { profile } = useAuth();
+  const { user, profile } = useAuth();
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState("All");
 
@@ -65,7 +96,11 @@ export default function LearnScreen() {
   const role = profile?.role ?? "";
   const canAccess = role === "farmer" || role === "admin";
 
-  if (!canAccess && role) {
+  if (!user) {
+    return <GuestBlock />;
+  }
+
+  if (!canAccess) {
     return <AccessDenied role={role} />;
   }
 
@@ -307,5 +342,15 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontFamily: "Inter_600SemiBold",
     color: "#fff",
+  },
+  signInLink: {
+    marginTop: 16,
+    paddingVertical: 8,
+  },
+  signInLinkText: {
+    fontSize: 14,
+    fontFamily: "Inter_500Medium",
+    color: C.primary,
+    textAlign: "center",
   },
 });

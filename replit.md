@@ -1,78 +1,55 @@
-# AgriLearn — Agricultural Learning Platform
-
-## Project Overview
+AgriLearn — Agricultural Learning Platform
+Project Overview
 A comprehensive React Native/Expo mobile application for South African farmers, buyers, retailers, and admins. The app provides agricultural learning modules, a produce marketplace, and multilingual support.
 
-## Architecture
-- **Frontend**: React Native + Expo (managed workflow)
-- **Backend/Auth/DB**: Supabase (PostgreSQL, JWT auth, PostgREST API, Row-Level Security)
-- **Navigation**: Expo Router (file-based, tabs + modal stack)
-- **State**: React Context (auth) + TanStack React Query (server state)
-- **Language**: TypeScript throughout
+Architecture
+Frontend: React Native + Expo (managed workflow), served as web via Metro on port 5000
+API Server: Express.js backend running on port 3000
+Auth/Primary DB: Supabase (PostgreSQL, JWT auth, PostgREST API, Row-Level Security)
+Replit DB: PostgreSQL provisioned for the Replit environment (schema mirrors Supabase schema)
+Navigation: Expo Router (file-based, tabs + modal stack)
+State: React Context (auth) + TanStack React Query (server state)
+Language: TypeScript throughout
+Monorepo: pnpm workspaces
+Project Structure
+artifacts/
+├── agri-learn/           # Expo React Native mobile app (web via Metro)
+│   ├── app/              # File-based routes (Expo Router)
+│   ├── lib/supabase.ts   # Supabase client
+│   ├── context/          # AuthContext (Supabase auth)
+│   └── server/serve.js   # Static production server
+├── api-server/           # Express.js API backend
+│   └── src/
+│       ├── app.ts        # Express setup
+│       ├── routes/       # API routes (/api/healthz, etc.)
+│       └── index.ts      # Server entry
+└── mockup-sandbox/       # Vite UI component explorer
+lib/
+├── db/                   # Drizzle ORM + PostgreSQL schema
+├── api-spec/             # OpenAPI specification
+├── api-zod/              # Zod schemas (generated)
+└── api-client-react/     # React Query hooks (generated)
 
-## Key Files
-```
-artifacts/agri-learn/
-├── app/
-│   ├── _layout.tsx           # Root layout, providers
-│   ├── (tabs)/
-│   │   ├── _layout.tsx       # Tab bar (native glass + classic fallback)
-│   │   ├── index.tsx         # Home screen
-│   │   ├── learn.tsx         # Learning modules list
-│   │   ├── market.tsx        # Marketplace listings
-│   │   └── profile.tsx       # User profile + auth gate
-│   ├── (auth)/
-│   │   ├── _layout.tsx       # Auth modal stack
-│   │   ├── login.tsx         # Sign in screen
-│   │   └── register.tsx      # Registration with role selector
-│   ├── module/[id].tsx       # Module detail + content reader
-│   ├── product/[id].tsx      # Product detail + contact seller
-│   └── listing/create.tsx    # Create listing form (farmers only)
-├── lib/supabase.ts           # Supabase client + type definitions
-├── context/AuthContext.tsx   # Auth provider (sign in/up/out, profile)
-└── constants/colors.ts       # Design system (green #2D6A4F palette)
-```
-
-## User Roles
-- **farmer**: List/manage produce, access all learning modules
-- **buyer**: Browse and purchase produce, access learning modules
-- **retailer**: Bulk purchasing, access learning modules
-- **admin**: Full access + content management + audit logs
-
-## Environment Variables
-- `EXPO_PUBLIC_SUPABASE_URL`: `https://quxdfknwgymgghemkmcd.supabase.co`
-- `EXPO_PUBLIC_SUPABASE_ANON_KEY`: Set in Supabase dashboard → Project Settings → API → anon public key
-- Copy `artifacts/agri-learn/.env.example` → `artifacts/agri-learn/.env` and fill in values
-
-## Local Development (Windows)
-See `README.md` for full setup instructions. Summary:
-1. Install Node.js (LTS), pnpm, and Expo Go on your phone
-2. `pnpm install`
-3. Copy and fill `.env` files (see `.env.example` in each artifact)
-4. `pnpm --filter @workspace/agri-learn run dev` to start the Expo app
-
-## Design System
-- Primary: `#2D6A4F` (forest green)
-- Primary Light: `#52B788`
-- Accent: `#F2994A` (warm orange)
-- Font: Inter (400/500/600/700)
-
-## Canvas Design Documentation
-The workspace canvas contains full academic assessment documentation:
-1. **Database ERD** — 3NF normalized schema with all tables, fields, constraints, cardinalities
-2. **System Architecture** — Component layers, Supabase services, technology justification
-3. **Security Architecture** — Auth, RBAC/RLS, encryption, SQL injection prevention, POPIA compliance
-4. **API Specification** — All REST endpoints (PostgREST), request/response formats, HTTP status codes
-5. **Activity Diagram** — Module learning flow (auth → browse → select → read → complete)
-6. **Domain Class Diagram** — Classes, attributes, methods, enumerations, relationships
-7. **UI/UX Design** — All 7 screens, design system, responsive design decisions
-8. **Data Dictionary** — Field definitions, types, constraints, business rules
-
-## Data
-Currently using mock data (in-screen arrays). Will switch to live Supabase queries once `EXPO_PUBLIC_SUPABASE_ANON_KEY` is provided.
-
-## South African Context
-- Currency: South African Rand (R)
-- Locations: Durban KZN, Johannesburg GP, Pretoria GP, Free State, Limpopo, Western Cape
-- Languages targeted: English, isiZulu, Sesotho, Afrikaans, isiXhosa
-- POPIA compliance built into security model
+Workflows
+Start application: pnpm --filter @workspace/agri-learn run dev — Expo web on port 5000
+API Server: pnpm --filter @workspace/api-server run dev — Express on port 3000
+Environment Variables
+EXPO_PUBLIC_SUPABASE_URL: Supabase project URL (set in Replit secrets)
+EXPO_PUBLIC_SUPABASE_ANON_KEY: Supabase anon/public key (set in Replit secrets)
+DATABASE_URL: Replit PostgreSQL connection string (auto-provisioned)
+PORT: API server port (default 3000)
+User Roles
+farmer: List/manage produce, access all learning modules
+buyer: Browse and purchase produce, access learning modules
+retailer: Bulk purchasing, access learning modules
+admin: Full access + content management + audit logs
+Design System
+Primary: #2D6A4F (forest green)
+Primary Light: #52B788
+Accent: #F2994A (warm orange)
+Font: Inter (400/500/600/700)
+South African Context
+Currency: South African Rand (R)
+Locations: Durban KZN, Johannesburg GP, Pretoria GP, Free State, Limpopo, Western Cape
+Languages targeted: English, isiZulu, Sesotho, Afrikaans, isiXhosa
+POPIA compliance built into security model

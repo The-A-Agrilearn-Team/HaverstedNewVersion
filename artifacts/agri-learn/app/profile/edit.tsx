@@ -53,7 +53,7 @@ export default function EditProfileScreen() {
   const [fullName, setFullName] = useState(profile?.full_name ?? "");
   const [phone, setPhone] = useState(profile?.phone ?? "");
   const [location, setLocation] = useState(profile?.location ?? "");
-  const [language, setLanguage] = useState(profile?.language_preference ?? "en");
+  const [language, setLanguage] = useState(profile?.language_pref ?? "en");
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -83,7 +83,7 @@ export default function EditProfileScreen() {
       full_name: fullName.trim(),
       phone: phone.trim() || undefined,
       location: location.trim() || undefined,
-      language_preference: language,
+      language_pref: language,
     });
     setSaving(false);
     if (error) {
@@ -101,7 +101,7 @@ export default function EditProfileScreen() {
     fullName !== (profile?.full_name ?? "") ||
     phone !== (profile?.phone ?? "") ||
     location !== (profile?.location ?? "") ||
-    language !== (profile?.language_preference ?? "en");
+    language !== (profile?.language_pref ?? "en");
 
   const initials = (fullName || profile?.full_name || user?.email || "?")
     .split(" ")

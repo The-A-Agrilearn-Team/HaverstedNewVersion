@@ -16,6 +16,7 @@ import { useAuth } from "@/context/AuthContext";
 import Colors from "@/constants/colors";
 import { useFeaturedModules } from "@/hooks/useModules";
 import { useRecentListings } from "@/hooks/useListings";
+import { useUnreadCount } from "@/hooks/useNotifications";
 
 const C = Colors.light;
 
@@ -36,6 +37,7 @@ export default function HomeScreen() {
 
   const { data: modules = [], isLoading: modulesLoading, refetch: refetchModules } = useFeaturedModules();
   const { data: listings = [], isLoading: listingsLoading, refetch: refetchListings } = useRecentListings();
+  const { data: unreadCount = 0 } = useUnreadCount();
 
   const greeting = () => {
     const h = new Date().getHours();
@@ -78,8 +80,25 @@ export default function HomeScreen() {
               <Text style={styles.signInBadgeText}>Sign In</Text>
             </Pressable>
           )}
-          <Pressable style={styles.notifButton}>
+          <Pressable
+            style={styles.notifButton}
+            onPress={() => {
+              if (user) {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                router.push("/profile/messages");
+              } else {
+                router.push("/(auth)/login");
+              }
+            }}
+          >
             <Feather name="bell" size={22} color={C.text} />
+            {unreadCount > 0 && (
+              <View style={styles.notifBadge}>
+                <Text style={styles.notifBadgeText}>
+                  {unreadCount > 99 ? "99+" : unreadCount}
+                </Text>
+              </View>
+            )}
           </Pressable>
         </View>
       </View>
@@ -251,6 +270,25 @@ const styles = StyleSheet.create({
     backgroundColor: C.surfaceSecondary,
     alignItems: "center",
     justifyContent: "center",
+  },
+  notifBadge: {
+    position: "absolute",
+    top: -2,
+    right: -2,
+    backgroundColor: "#EF4444",
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 4,
+    borderWidth: 1.5,
+    borderColor: C.background,
+  },
+  notifBadgeText: {
+    fontSize: 10,
+    fontFamily: "Inter_700Bold",
+    color: "#fff",
   },
   guestBanner: {
     flexDirection: "row",
