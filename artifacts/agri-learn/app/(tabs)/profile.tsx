@@ -196,6 +196,11 @@ export default function ProfileScreen() {
                 label="Messages"
                 badge={unreadMessages > 0 ? String(unreadMessages) : undefined}
                 onPress={() => router.push("/profile/messages" as any)}
+              />
+              <MenuRow
+                icon="shopping-bag"
+                label="My Orders"
+                onPress={() => router.push("/profile/orders" as any)}
                 last
               />
             </>
@@ -212,6 +217,11 @@ export default function ProfileScreen() {
                 label="Messages"
                 badge={unreadMessages > 0 ? String(unreadMessages) : undefined}
                 onPress={() => router.push("/profile/messages" as any)}
+              />
+              <MenuRow
+                icon="shopping-bag"
+                label="My Orders"
+                onPress={() => router.push("/profile/orders" as any)}
               />
               <MenuRow icon="plus-circle" label="Create New Listing" onPress={() => router.push("/listing/create")} last />
             </>
