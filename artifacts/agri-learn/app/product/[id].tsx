@@ -65,14 +65,21 @@ export default function ProductDetailScreen() {
   const { data: item, isLoading } = useSingleListing(id ?? "1");
 
   const handleContact = async () => {
-    if (!user) {
-      Alert.alert("Sign In Required", "Please sign in to contact the seller.", [
-        { text: "Cancel", style: "cancel" },
-        { text: "Sign In", onPress: () => router.push("/(auth)/login") },
-      ]);
+    if (!user || !item) return;
+
+    const chatParams = {
+      listingId: item.id,
+      otherId: item.farmer_id,
+      otherName: item.farmer_name ?? "Farmer",
+      listingTitle: item.title,
+      listingPrice: String(item.price),
+      listingUnit: item.unit,
+    };
+
+    if (contacted) {
+      router.push({ pathname: "/profile/chat" as any, params: chatParams });
       return;
     }
-    if (!item) return;
 
     try {
       await sendNotification.mutateAsync({
@@ -82,13 +89,9 @@ export default function ProductDetailScreen() {
       });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setContacted(true);
-      Alert.alert(
-        "Request Sent",
-        `Your interest in "${item.title}" has been sent to ${item.farmer_name}. They will contact you shortly.`,
-        [{ text: "OK" }]
-      );
+      router.push({ pathname: "/profile/chat" as any, params: chatParams });
     } catch {
-      Alert.alert("Error", "Could not send your request. Please try again.");
+      Alert.alert("Error", "Could not open chat. Please try again.");
     }
   };
 
@@ -159,7 +162,7 @@ export default function ProductDetailScreen() {
             />
           ) : (
             <View style={styles.imagePlaceholder}>
-              <Feather name="package" size={52} color={C.primary} />
+              <Feather name="package" size={48} color={`${C.primary}40`} />
             </View>
           )}
           <View style={styles.statusBadge}>
@@ -204,16 +207,16 @@ export default function ProductDetailScreen() {
               <Text style={styles.farmerAvatarText}>{farmerInitials}</Text>
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.farmerLabel}>Sold by</Text>
+              <Text style={styles.farmerLabel}>Listed by</Text>
               <Text style={styles.farmerName}>{item.farmer_name}</Text>
               <View style={styles.farmerMeta}>
-                <Feather name="map-pin" size={12} color={C.textSecondary} />
+                <Feather name="map-pin" size={11} color={C.textSecondary} />
                 <Text style={styles.farmerLocation}>{item.location}</Text>
+                <View style={styles.verifiedBadge}>
+                  <Feather name="check-circle" size={11} color={C.success} />
+                  <Text style={styles.verifiedText}>Verified</Text>
+                </View>
               </View>
-            </View>
-            <View style={styles.verifiedBadge}>
-              <Feather name="check-circle" size={14} color={C.success} />
-              <Text style={styles.verifiedText}>Verified</Text>
             </View>
           </View>
 
@@ -225,18 +228,12 @@ export default function ProductDetailScreen() {
           <View style={styles.divider} />
 
           <View style={styles.tags}>
-            <View style={styles.tag}>
-              <Feather name="shield" size={13} color={C.primaryLight} />
-              <Text style={styles.tagText}>Quality Checked</Text>
-            </View>
-            <View style={styles.tag}>
-              <Feather name="truck" size={13} color={C.primaryLight} />
-              <Text style={styles.tagText}>Delivery Available</Text>
-            </View>
-            <View style={styles.tag}>
-              <Feather name="refresh-cw" size={13} color={C.primaryLight} />
-              <Text style={styles.tagText}>Fresh Stock</Text>
-            </View>
+            {[item.category, item.unit, item.location.split(",")[0]].map((tag) => (
+              <View key={tag} style={styles.tag}>
+                <Feather name="tag" size={11} color={C.primaryLight} />
+                <Text style={styles.tagText}>{tag}</Text>
+              </View>
+            ))}
           </View>
         </View>
       </ScrollView>
@@ -247,19 +244,19 @@ export default function ProductDetailScreen() {
             style={({ pressed }) => [
               styles.contactBtn,
               contacted && styles.contactedBtn,
-              (contacted || sendNotification.isPending) && { opacity: 0.8 },
+              sendNotification.isPending && { opacity: 0.7 },
               { opacity: pressed ? 0.85 : 1 },
             ]}
             onPress={handleContact}
-            disabled={contacted || sendNotification.isPending}
+            disabled={sendNotification.isPending}
           >
             {sendNotification.isPending ? (
               <ActivityIndicator size="small" color="#fff" />
             ) : (
-              <Feather name={contacted ? "check" : "message-circle"} size={20} color="#fff" />
+              <Feather name="message-circle" size={20} color="#fff" />
             )}
             <Text style={styles.contactBtnText}>
-              {sendNotification.isPending ? "Sending..." : contacted ? "Request Sent" : "Contact Seller"}
+              {sendNotification.isPending ? "Opening chat..." : contacted ? "Open Chat" : "Message Seller"}
             </Text>
           </Pressable>
         </View>
