@@ -1,4 +1,5 @@
 import { AgriService, getMockServices } from "@/hooks/useServices";
+import { API_BASE_URL } from "./config";
 
 export interface AiSearchResult {
   summary: string;
@@ -31,7 +32,7 @@ export async function aiSearchServices(
   }));
 
   try {
-    const response = await fetch("http://localhost:3000/api/ai-search", {
+    const response = await fetch(`${API_BASE_URL}/api/ai-search`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -80,9 +81,7 @@ export async function askModuleAssistant(
   if (!question.trim()) return "";
 
   try {
-    const response = await fetch(
-      "http://localhost:3000/api/module-assist",
-      {
+    const response = await fetch(`${API_BASE_URL}/api/module-assist`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

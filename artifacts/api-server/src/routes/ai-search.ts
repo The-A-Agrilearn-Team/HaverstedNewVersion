@@ -100,11 +100,29 @@ Respond ONLY with valid JSON in this exact format:
     const raw = completion.choices[0]?.message?.content ?? "{}";
 
     let parsed;
+
     try {
-      parsed = JSON.parse(raw);
-    } catch (e) {
-      console.warn("[ai-search] Invalid JSON from AI:", raw);
-      parsed = {};
+      const raw = completion.choices?.[0]?.message?.content;
+
+      if (!raw) {
+        throw new Error("Empty AI response");
+      }
+
+      // Clean response (removes accidental markdown)
+      const cleaned = raw
+        .replace(/```json/g, "")
+        .replace(/```/g, "")
+        .trim();
+
+      parsed = JSON.parse(cleaned);
+    } catch (err) {
+      console.warn("[ai-search] JSON parse failed:", err);
+
+      parsed = {
+        summary: "I couldn't fully process your request, but here are some possible matches.",
+        match_ids: [],
+        external: [],
+      };
     }
 
     res.json({
