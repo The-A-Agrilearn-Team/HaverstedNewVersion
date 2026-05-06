@@ -92,6 +92,29 @@ export default function ProductDetailScreen() {
     }
   };
 
+  if (!user) {
+    return (
+      <View style={{ flex: 1, backgroundColor: C.background, alignItems: "center", justifyContent: "center", padding: 32 }}>
+        <Feather name="lock" size={48} color={C.primary} style={{ marginBottom: 20 }} />
+        <Text style={{ fontSize: 22, fontFamily: "Inter_700Bold", color: C.text, textAlign: "center", marginBottom: 10 }}>
+          Sign in to view details
+        </Text>
+        <Text style={{ fontSize: 15, fontFamily: "Inter_400Regular", color: C.textSecondary, textAlign: "center", marginBottom: 32, lineHeight: 22 }}>
+          Create a free account or sign in to view product details and contact sellers.
+        </Text>
+        <Pressable
+          style={{ backgroundColor: C.primary, borderRadius: 14, paddingVertical: 14, paddingHorizontal: 32, marginBottom: 12 }}
+          onPress={() => router.replace("/(auth)/login")}
+        >
+          <Text style={{ color: "#fff", fontSize: 16, fontFamily: "Inter_600SemiBold" }}>Sign In</Text>
+        </Pressable>
+        <Pressable onPress={() => router.back()}>
+          <Text style={{ fontSize: 14, fontFamily: "Inter_500Medium", color: C.textSecondary }}>Go Back</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
   if (isLoading || !item) {
     return (
       <View style={{ flex: 1, backgroundColor: C.background, alignItems: "center", justifyContent: "center" }}>

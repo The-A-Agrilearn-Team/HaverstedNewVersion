@@ -22,7 +22,7 @@ const C = Colors.light;
 const ROLES = [
   { key: "farmer", label: "Farmer", icon: "sun", desc: "Sell produce & learn" },
   { key: "buyer", label: "Buyer", icon: "shopping-bag", desc: "Buy from farmers" },
-  { key: "retailer", label: "Retailer", icon: "briefcase", desc: "Bulk purchasing" },
+  { key: "retailer", label: "Retailer", icon: "briefcase", desc: "Bulk purchasing", disabled: true },
 ];
 
 export default function RegisterScreen() {
@@ -189,8 +189,10 @@ export default function RegisterScreen() {
                   style={[
                     styles.roleCard,
                     role === r.key && styles.roleCardSelected,
+                    r.disabled && styles.roleCardDisabled,
                   ]}
                   onPress={() => {
+                    if (r.disabled) return;
                     setRole(r.key);
                     Haptics.selectionAsync();
                   }}
@@ -198,17 +200,20 @@ export default function RegisterScreen() {
                   <Feather
                     name={r.icon as any}
                     size={22}
-                    color={role === r.key ? C.primary : C.textSecondary}
+                    color={r.disabled ? C.textTertiary : role === r.key ? C.primary : C.textSecondary}
                   />
                   <Text
                     style={[
                       styles.roleLabel,
                       role === r.key && styles.roleLabelSelected,
+                      r.disabled && styles.roleLabelDisabled,
                     ]}
                   >
                     {r.label}
                   </Text>
-                  <Text style={styles.roleDesc}>{r.desc}</Text>
+                  <Text style={[styles.roleDesc, r.disabled && styles.roleDescDisabled]}>
+                    {r.disabled ? "" : r.desc}
+                  </Text>
                 </Pressable>
               ))}
             </View>
@@ -307,7 +312,10 @@ const styles = StyleSheet.create({
   },
   roleLabel: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: C.textSecondary },
   roleLabelSelected: { color: C.primary },
+  roleLabelDisabled: { color: C.textTertiary },
   roleDesc: { fontSize: 10, fontFamily: "Inter_400Regular", color: C.textTertiary, textAlign: "center" },
+  roleDescDisabled: { color: C.textTertiary, opacity: 0.6 },
+  roleCardDisabled: { opacity: 0.45, backgroundColor: C.surface },
   termsRow: {
     flexDirection: "row",
     alignItems: "flex-start",
