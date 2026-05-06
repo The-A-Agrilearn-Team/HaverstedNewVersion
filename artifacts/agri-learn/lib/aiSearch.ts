@@ -33,7 +33,9 @@ export async function aiSearchServices(
   try {
     const response = await fetch("http://localhost:3000/api/ai-search", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({ query, services: servicesSummary }),
     });
 
@@ -43,7 +45,10 @@ export async function aiSearchServices(
 
     const data = await response.json();
 
-    const matchIds: string[] = Array.isArray(data.match_ids) ? data.match_ids : [];
+    const matchIds: string[] = Array.isArray(data.match_ids)
+      ? data.match_ids
+      : [];
+
     const matches = matchIds
       .map((id: string) => services.find((s) => s.id === id))
       .filter((s): s is AgriService => Boolean(s));
@@ -51,31 +56,52 @@ export async function aiSearchServices(
     return {
       summary: data.summary ?? "",
       matches,
-      externalSuggestions: Array.isArray(data.external) ? data.external : [],
+      externalSuggestions: Array.isArray(data.external)
+        ? data.external
+        : [],
     };
   } catch (err) {
-    console.warn("[aiSearch] backend unavailable, using offline fallback:", err);
+    console.warn(
+      "[aiSearch] backend unavailable, using offline fallback:",
+      err,
+    );
     return offlineFallback(query, services);
   }
 }
 
+/**
+ * ✅ FIXED: Module Assistant function
+ * Now matches backend expectations
+ */
 export async function askModuleAssistant(
   question: string,
-  moduleTitle: string,
-  moduleContent: string,
+  moduleId: number
 ): Promise<string> {
   if (!question.trim()) return "";
 
   try {
-    const response = await fetch("http://localhost:3000/api/module-assist", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ question, moduleTitle, moduleContent }),
-    });
+    const response = await fetch(
+      "http://localhost:3000/api/module-assist",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          moduleId: moduleId, // ✅ REQUIRED
+          question: question, // ✅ REQUIRED
+        }),
+      }
+    );
 
-    if (!response.ok) throw new Error(`API error: ${response.status}`);
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`);
+    }
 
     const data = await response.json();
+
+    console.log("Module Assist Response:", data); // ✅ Debug log
+
     return data.answer ?? "No answer returned.";
   } catch (err) {
     console.warn("[moduleAssist] backend unavailable:", err);
@@ -83,7 +109,10 @@ export async function askModuleAssistant(
   }
 }
 
-function offlineFallback(query: string, services: AgriService[]): AiSearchResult {
+function offlineFallback(
+  query: string,
+  services: AgriService[],
+): AiSearchResult {
   const tokens = query
     .toLowerCase()
     .split(/\s+/)
@@ -91,7 +120,8 @@ function offlineFallback(query: string, services: AgriService[]): AiSearchResult
 
   if (!tokens.length) {
     return {
-      summary: "Showing all services. Type a more specific question for better matches.",
+      summary:
+        "Showing all services. Type a more specific question for better matches.",
       matches: services,
       externalSuggestions: [],
       fromCache: true,
@@ -99,9 +129,13 @@ function offlineFallback(query: string, services: AgriService[]): AiSearchResult
   }
 
   const scored = services.map((s) => {
-    const haystack =
-      `${s.title} ${s.description} ${s.category} ${s.location}`.toLowerCase();
-    const score = tokens.reduce((acc, t) => acc + (haystack.includes(t) ? 1 : 0), 0);
+    const haystack = `${s.title} ${s.description} ${s.category} ${s.location}`.toLowerCase();
+
+    const score = tokens.reduce(
+      (acc, t) => acc + (haystack.includes(t) ? 1 : 0),
+      0,
+    );
+
     return { service: s, score };
   });
 
@@ -110,15 +144,21 @@ function offlineFallback(query: string, services: AgriService[]): AiSearchResult
     .sort((a, b) => b.score - a.score)
     .map((x) => x.service);
 
-  const googleLink = `https://www.google.com/search?q=${encodeURIComponent(query + " South Africa")}`;
-  const mapsLink = `https://www.google.com/maps/search/${encodeURIComponent(query + " South Africa")}`;
+  const googleLink = `https://www.google.com/search?q=${encodeURIComponent(
+    query + " South Africa",
+  )}`;
+
+  const mapsLink = `https://www.google.com/maps/search/${encodeURIComponent(
+    query + " South Africa",
+  )}`;
 
   const externalSuggestions: ExternalSuggestion[] = matches.length
     ? []
     : [
         {
           name: `Search Google: "${query}"`,
-          description: "Find providers, reviews, and contact details on Google.",
+          description:
+            "Find providers, reviews, and contact details on Google.",
           where_to_find: googleLink,
         },
         {
@@ -128,7 +168,8 @@ function offlineFallback(query: string, services: AgriService[]): AiSearchResult
         },
         {
           name: "Agrihandbook South Africa",
-          description: "Annual directory of SA agri service providers and suppliers.",
+          description:
+            "Annual directory of SA agri service providers and suppliers.",
           where_to_find: "https://www.agrihandbook.co.za",
         },
       ];

@@ -1,7 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import { router, Stack, usePathname } from "expo-router";
 import * as Haptics from "expo-haptics";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -32,23 +32,6 @@ const MAIN_NAV = [
   { id: "listings", label: "Market",     icon: "shopping-bag", path: "/admin/listings" },
   { id: "logs",     label: "Settings",   icon: "settings",     path: "/admin/logs" },
 ];
-
-const OTP_LENGTH = 6;
-const TOTP_STEP = 30;
-
-enum Step {
-  Credentials,
-  MFA,
-}
-
-function generateTOTP(secret: number): { code: string; remaining: number } {
-  const now = Math.floor(Date.now() / 1000);
-  const window = Math.floor(now / TOTP_STEP);
-  const raw = ((secret * (window + 1)) % 900000) + 100000;
-  const code = raw.toString().padStart(6, "0");
-  const remaining = TOTP_STEP - (now % TOTP_STEP);
-  return { code, remaining };
-}
 
 function isPathActive(currentPath: string, itemPath: string) {
   if (itemPath === "/admin") return currentPath === "/admin";
@@ -242,39 +225,12 @@ export default function AdminLayout() {
   const isMobile = width < MOBILE_BREAKPOINT;
 
   const [verified, setVerified] = useState(false);
-  const [step, setStep] = useState<Step>(Step.Credentials);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-
-  const [otp, setOtp] = useState<string[]>(Array(OTP_LENGTH).fill(""));
-  const [totpCode, setTotpCode] = useState("");
-  const [countdown, setCountdown] = useState(TOTP_STEP);
-  const otpRefs = useRef<(TextInput | null)[]>([]);
-
-  const refreshTOTP = useCallback(() => {
-    const { code, remaining } = generateTOTP(ADMIN_CONFIG.mfaSecret);
-    setTotpCode(code);
-    setCountdown(remaining);
-  }, []);
-
-  useEffect(() => {
-    if (step !== Step.MFA) return;
-    refreshTOTP();
-    const interval = setInterval(() => {
-      const { code, remaining } = generateTOTP(ADMIN_CONFIG.mfaSecret);
-      setTotpCode(code);
-      setCountdown(remaining);
-      if (remaining === TOTP_STEP) {
-        setOtp(Array(OTP_LENGTH).fill(""));
-        otpRefs.current[0]?.focus();
-      }
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [step, refreshTOTP]);
 
   const handleVerifyCredentials = async () => {
     if (!email.trim() || !password) {
@@ -303,62 +259,17 @@ export default function AdminLayout() {
     }
 
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    setStep(Step.MFA);
-  };
-
-  const handleVerifyMFA = () => {
-    const entered = otp.join("");
-    if (entered.length < OTP_LENGTH) {
-      setError("Please enter the complete 6-digit code.");
-      return;
-    }
-
-    const { code } = generateTOTP(ADMIN_CONFIG.mfaSecret);
-    if (entered !== code) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      setError("Incorrect authentication code. Please check and try again.");
-      setOtp(Array(OTP_LENGTH).fill(""));
-      otpRefs.current[0]?.focus();
-      return;
-    }
-
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setError("");
     setVerified(true);
-  };
-
-  const handleOtpChange = (value: string, index: number) => {
-    const digit = value.replace(/[^0-9]/g, "").slice(-1);
-    const next = [...otp];
-    next[index] = digit;
-    setOtp(next);
-    if (digit && index < OTP_LENGTH - 1) {
-      otpRefs.current[index + 1]?.focus();
-    }
-  };
-
-  const handleOtpKeyPress = (e: any, index: number) => {
-    if (e.nativeEvent.key === "Backspace" && !otp[index] && index > 0) {
-      otpRefs.current[index - 1]?.focus();
-    }
   };
 
   const handleSignOut = async () => {
     await signOut();
     setVerified(false);
-    setStep(Step.Credentials);
     setEmail("");
     setPassword("");
-    setOtp(Array(OTP_LENGTH).fill(""));
     setError("");
     router.replace("/(tabs)");
-  };
-
-  const resetToCredentials = async () => {
-    await signOut();
-    setStep(Step.Credentials);
-    setOtp(Array(OTP_LENGTH).fill(""));
-    setError("");
   };
 
   if (!verified) {
@@ -368,165 +279,81 @@ export default function AdminLayout() {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <View style={[gate.container, { paddingTop: insets.top + 32 }]}>
+          <View style={gate.iconBox}>
+            <Feather name="shield" size={30} color="#2D6A4F" />
+          </View>
+          <Text style={gate.title}>Admin Portal</Text>
+          <Text style={gate.sub}>
+            Enter your administrator credentials to continue.
+          </Text>
 
-          {/* ── Step indicator ── */}
-          <View style={gate.steps}>
-            <View style={gate.stepRow}>
-              <View style={[gate.stepDot, gate.stepDotActive]}>
-                <Feather name="lock" size={12} color="#fff" />
-              </View>
-              <View style={[gate.stepLine, step === Step.MFA && gate.stepLineActive]} />
-              <View style={[gate.stepDot, step === Step.MFA && gate.stepDotActive]}>
-                <Feather name="shield" size={12} color={step === Step.MFA ? "#fff" : "#9CA3AF"} />
-              </View>
+          {error ? (
+            <View style={gate.errorBox}>
+              <Feather name="alert-circle" size={15} color="#DC2626" />
+              <Text style={gate.errorText}>{error}</Text>
             </View>
-            <View style={gate.stepLabels}>
-              <Text style={[gate.stepLabel, gate.stepLabelActive]}>Credentials</Text>
-              <Text style={[gate.stepLabel, step === Step.MFA && gate.stepLabelActive]}>
-                MFA Verification
-              </Text>
+          ) : null}
+
+          <View style={gate.fieldGroup}>
+            <Text style={gate.label}>Email</Text>
+            <View style={gate.inputWrapper}>
+              <Feather name="mail" size={16} color="#9CA3AF" style={{ paddingLeft: 14 }} />
+              <TextInput
+                style={gate.input}
+                placeholder="Admin email address"
+                placeholderTextColor="#9CA3AF"
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                autoComplete="email"
+              />
             </View>
           </View>
 
-          {step === Step.Credentials ? (
-            <>
-              <View style={gate.iconBox}>
-                <Feather name="shield" size={30} color="#2D6A4F" />
-              </View>
-              <Text style={gate.title}>Admin Portal</Text>
-              <Text style={gate.sub}>
-                Enter your administrator credentials to continue.
-              </Text>
-
-              {error ? (
-                <View style={gate.errorBox}>
-                  <Feather name="alert-circle" size={15} color="#DC2626" />
-                  <Text style={gate.errorText}>{error}</Text>
-                </View>
-              ) : null}
-
-              <View style={gate.fieldGroup}>
-                <Text style={gate.label}>Email</Text>
-                <View style={gate.inputWrapper}>
-                  <Feather name="mail" size={16} color="#9CA3AF" style={{ paddingLeft: 14 }} />
-                  <TextInput
-                    style={gate.input}
-                    placeholder="Admin email address"
-                    placeholderTextColor="#9CA3AF"
-                    value={email}
-                    onChangeText={setEmail}
-                    autoCapitalize="none"
-                    keyboardType="email-address"
-                    autoComplete="email"
-                  />
-                </View>
-              </View>
-
-              <View style={gate.fieldGroup}>
-                <Text style={gate.label}>Password</Text>
-                <View style={gate.inputWrapper}>
-                  <Feather name="lock" size={16} color="#9CA3AF" style={{ paddingLeft: 14 }} />
-                  <TextInput
-                    style={[gate.input, { paddingRight: 48 }]}
-                    placeholder="••••••••"
-                    placeholderTextColor="#9CA3AF"
-                    value={password}
-                    onChangeText={setPassword}
-                    secureTextEntry={!showPassword}
-                    autoComplete="password"
-                  />
-                  <Pressable
-                    onPress={() => setShowPassword(!showPassword)}
-                    style={{ position: "absolute", right: 14, padding: 4 }}
-                  >
-                    <Feather name={showPassword ? "eye-off" : "eye"} size={16} color="#9CA3AF" />
-                  </Pressable>
-                </View>
-              </View>
-
+          <View style={gate.fieldGroup}>
+            <Text style={gate.label}>Password</Text>
+            <View style={gate.inputWrapper}>
+              <Feather name="lock" size={16} color="#9CA3AF" style={{ paddingLeft: 14 }} />
+              <TextInput
+                style={[gate.input, { paddingRight: 48 }]}
+                placeholder="••••••••"
+                placeholderTextColor="#9CA3AF"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+                autoComplete="password"
+              />
               <Pressable
-                style={({ pressed }) => [gate.verifyBtn, { opacity: pressed || loading ? 0.85 : 1 }]}
-                onPress={handleVerifyCredentials}
-                disabled={loading}
+                onPress={() => setShowPassword(!showPassword)}
+                style={{ position: "absolute", right: 14, padding: 4 }}
               >
-                {loading ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <>
-                    <Feather name="arrow-right" size={17} color="#fff" />
-                    <Text style={gate.verifyBtnText}>Continue to MFA</Text>
-                  </>
-                )}
+                <Feather name={showPassword ? "eye-off" : "eye"} size={16} color="#9CA3AF" />
               </Pressable>
+            </View>
+          </View>
 
-              <Pressable
-                style={({ pressed }) => [gate.cancelBtn, { opacity: pressed ? 0.7 : 1 }]}
-                onPress={() => router.replace("/(tabs)")}
-              >
-                <Text style={gate.cancelBtnText}>Cancel</Text>
-              </Pressable>
-            </>
-          ) : (
-            <>
-              <View style={[gate.iconBox, { backgroundColor: "rgba(45,106,79,0.12)" }]}>
-                <Feather name="smartphone" size={30} color="#2D6A4F" />
-              </View>
-              <Text style={gate.title}>Two-Factor Auth</Text>
-              <Text style={gate.sub}>
-                Enter the 6-digit code from your authenticator app.
-              </Text>
+          <Pressable
+            style={({ pressed }) => [gate.verifyBtn, { opacity: pressed || loading ? 0.85 : 1 }]}
+            onPress={handleVerifyCredentials}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <>
+                <Feather name="arrow-right" size={17} color="#fff" />
+                <Text style={gate.verifyBtnText}>Sign In</Text>
+              </>
+            )}
+          </Pressable>
 
-              {error ? (
-                <View style={gate.errorBox}>
-                  <Feather name="alert-circle" size={15} color="#DC2626" />
-                  <Text style={gate.errorText}>{error}</Text>
-                </View>
-              ) : null}
-
-              {/* Demo TOTP display */}
-              <View style={gate.demoBadge}>
-                <Feather name="info" size={13} color="#2D6A4F" />
-                <Text style={gate.demoBadgeText}>Demo Mode — Authenticator Code:</Text>
-                <Text style={gate.demoCode}>{totpCode}</Text>
-                <View style={gate.countdownPill}>
-                  <Text style={gate.countdownText}>{countdown}s</Text>
-                </View>
-              </View>
-
-              {/* OTP boxes */}
-              <View style={gate.otpRow}>
-                {otp.map((digit, i) => (
-                  <TextInput
-                    key={i}
-                    ref={(r) => { otpRefs.current[i] = r; }}
-                    style={[gate.otpBox, digit && gate.otpBoxFilled]}
-                    value={digit}
-                    onChangeText={(v) => handleOtpChange(v, i)}
-                    onKeyPress={(e) => handleOtpKeyPress(e, i)}
-                    keyboardType="number-pad"
-                    maxLength={1}
-                    selectTextOnFocus
-                    textAlign="center"
-                  />
-                ))}
-              </View>
-
-              <Pressable
-                style={({ pressed }) => [gate.verifyBtn, { opacity: pressed ? 0.85 : 1 }]}
-                onPress={handleVerifyMFA}
-              >
-                <Feather name="shield" size={17} color="#fff" />
-                <Text style={gate.verifyBtnText}>Verify & Enter</Text>
-              </Pressable>
-
-              <Pressable
-                style={({ pressed }) => [gate.cancelBtn, { opacity: pressed ? 0.7 : 1 }]}
-                onPress={resetToCredentials}
-              >
-                <Text style={gate.cancelBtnText}>← Back</Text>
-              </Pressable>
-            </>
-          )}
+          <Pressable
+            style={({ pressed }) => [gate.cancelBtn, { opacity: pressed ? 0.7 : 1 }]}
+            onPress={() => router.replace("/(tabs)")}
+          >
+            <Text style={gate.cancelBtnText}>Cancel</Text>
+          </Pressable>
         </View>
       </KeyboardAvoidingView>
     );
@@ -878,64 +705,6 @@ const gate = StyleSheet.create({
   },
   cancelBtnText: { color: "#1A1A1A", fontSize: 16, fontFamily: "Inter_600SemiBold" },
 
-  // ── MFA / OTP ──
-  demoBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    flexWrap: "wrap",
-    gap: 6,
-    backgroundColor: "rgba(45,106,79,0.07)",
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "rgba(45,106,79,0.18)",
-    padding: 12,
-  },
-  demoBadgeText: {
-    fontSize: 13,
-    fontFamily: "Inter_500Medium",
-    color: "#2D6A4F",
-    flex: 1,
-    flexBasis: "60%",
-  },
-  demoCode: {
-    fontSize: 22,
-    fontFamily: "Inter_700Bold",
-    color: "#1B3A2A",
-    letterSpacing: 4,
-  },
-  countdownPill: {
-    backgroundColor: "#2D6A4F",
-    borderRadius: 20,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-  },
-  countdownText: {
-    fontSize: 12,
-    fontFamily: "Inter_700Bold",
-    color: "#fff",
-  },
-  otpRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    gap: 8,
-  },
-  otpBox: {
-    flex: 1,
-    aspectRatio: 1,
-    maxWidth: 52,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: "#E5E7EB",
-    backgroundColor: "#fff",
-    fontSize: 22,
-    fontFamily: "Inter_700Bold",
-    color: "#1A1A1A",
-    textAlign: "center",
-  },
-  otpBoxFilled: {
-    borderColor: "#2D6A4F",
-    backgroundColor: "rgba(45,106,79,0.05)",
-  },
 });
 
 const bottomNav = StyleSheet.create({

@@ -218,6 +218,10 @@ export default function HomeScreen() {
                 style={({ pressed }) => [styles.listingCard, { opacity: pressed ? 0.95 : 1 }]}
                 onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  if (!user) {
+                    router.push("/(auth)/login");
+                    return;
+                  }
                   router.push(`/product/${item.id}`);
                 }}
               >
