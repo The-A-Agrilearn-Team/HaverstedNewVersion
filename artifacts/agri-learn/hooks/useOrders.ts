@@ -126,16 +126,33 @@ export function useCreateOrder() {
 export function useUpdateOrderStatus() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ orderId, status }: { orderId: string; status: Order["status"] }) => {
+    mutationFn: async ({
+      orderId,
+      status,
+      listingId,
+    }: {
+      orderId: string;
+      status: Order["status"];
+      listingId?: string | null;
+    }) => {
       const { error } = await supabase
         .from("orders")
         .update({ status, updated_at: new Date().toISOString() })
         .eq("id", orderId);
       if (error) throw error;
+
+      if (listingId && status !== "cancelled") {
+        await supabase
+          .from("product_listings")
+          .update({ status: "sold" })
+          .eq("id", listingId)
+          .eq("status", "active");
+      }
     },
     onSuccess: (_d, vars) => {
       queryClient.invalidateQueries({ queryKey: ["orders"] });
       queryClient.invalidateQueries({ queryKey: ["order", vars.orderId] });
+      queryClient.invalidateQueries({ queryKey: ["listings"] });
     },
   });
 }

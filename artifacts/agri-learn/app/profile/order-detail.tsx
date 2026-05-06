@@ -1,7 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Colors from "@/constants/colors";
 import { useAuth } from "@/context/AuthContext";
 import { useOrder, useUpdateOrderStatus, useMyReview, useSubmitReview, useReviews, Order } from "@/hooks/useOrders";
+import { useMarkAsSold } from "@/hooks/useListings";
 
 const C = Colors.light;
 
@@ -104,11 +105,18 @@ export default function OrderDetailScreen() {
   const { data: allReviews = [] } = useReviews(order ? (order.farmer_id === user?.id ? order.buyer_id : order.farmer_id) : null);
   const updateStatus = useUpdateOrderStatus();
   const submitReview = useSubmitReview();
+  const markAsSold  = useMarkAsSold();
 
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
   const [submittingReview, setSubmittingReview] = useState(false);
   const [confirmAction, setConfirmAction] = useState<null | "advance" | "cancel">(null);
+
+  useEffect(() => {
+    if (order?.listing_id && order.status !== "cancelled") {
+      markAsSold.mutate(order.listing_id);
+    }
+  }, [order?.id, order?.listing_id, order?.status]);
 
   if (isLoading || !order) {
     return (
@@ -144,7 +152,7 @@ export default function OrderDetailScreen() {
     setConfirmAction(null);
     try {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      await updateStatus.mutateAsync({ orderId: order.id, status: ns });
+      await updateStatus.mutateAsync({ orderId: order.id, status: ns, listingId: order.listing_id });
       refetch();
     } catch (err: any) {
       Alert.alert("Update Failed", err?.message ?? "Could not update order status. Please try again.");

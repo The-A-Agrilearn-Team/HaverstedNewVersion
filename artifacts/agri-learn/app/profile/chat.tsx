@@ -26,6 +26,7 @@ import {
   ChatMessage,
 } from "@/hooks/useNotifications";
 import { useCreateOrder } from "@/hooks/useOrders";
+import { useMarkAsSold } from "@/hooks/useListings";
 
 const C = Colors.light;
 
@@ -187,6 +188,7 @@ export default function ChatScreen() {
   const sendRawMessage    = useSendRawMessage();
   const updateOfferStatus = useUpdateOfferStatus();
   const createOrder       = useCreateOrder();
+  const markAsSold        = useMarkAsSold();
 
   useEffect(() => {
     if (messages.length > 0) {
@@ -262,6 +264,9 @@ export default function ChatScreen() {
         pricePerUnit: originalOffer?.price_per_unit ?? 0,
         unit: originalOffer?.unit ?? listingUnit,
       });
+      if (listingId) {
+        await markAsSold.mutateAsync(listingId);
+      }
       await sendMessage.mutateAsync({
         receiverId: otherId,
         listingId,

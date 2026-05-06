@@ -2,10 +2,9 @@ import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { Image } from "expo-image";
 import { router } from "expo-router";
-import React from "react";
+import React, { useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -36,8 +35,17 @@ export default function MyListingsScreen() {
   const { user } = useAuth();
   const { data: listings = [], isLoading, refetch } = useMyListings(user?.id);
   const markAsSold = useMarkAsSold();
+  const [confirmSoldId, setConfirmSoldId] = useState<string | null>(null);
 
   const activeCount = listings.filter((l) => l.status === "active").length;
+  const soldCount   = listings.filter((l) => l.status === "sold").length;
+
+  const handleMarkSold = async (id: string) => {
+    if (confirmSoldId !== id) { setConfirmSoldId(id); return; }
+    setConfirmSoldId(null);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    markAsSold.mutate(id, { onSuccess: () => refetch() });
+  };
 
   return (
     <View style={{ flex: 1, backgroundColor: C.background }}>
@@ -92,18 +100,24 @@ export default function MyListingsScreen() {
                 <Text style={styles.summaryLbl}>Active</Text>
               </View>
               <View style={styles.summaryCard}>
-                <Text style={[styles.summaryNum, { color: C.textSecondary }]}>{listings.length - activeCount}</Text>
-                <Text style={styles.summaryLbl}>Inactive</Text>
+                <Text style={[styles.summaryNum, { color: "#6B7280" }]}>{soldCount}</Text>
+                <Text style={styles.summaryLbl}>Sold</Text>
               </View>
             </View>
 
             {listings.map((item) => {
-              const status = STATUS_COLORS[item.status ?? "active"] ?? STATUS_COLORS.active;
+              const statusStyle = STATUS_COLORS[item.status ?? "active"] ?? STATUS_COLORS.active;
+              const isPendingConfirm = confirmSoldId === item.id;
               return (
                 <Pressable
                   key={item.id}
-                  style={({ pressed }) => [styles.card, { opacity: pressed ? 0.95 : 1 }]}
+                  style={({ pressed }) => [
+                    styles.card,
+                    item.status === "sold" && styles.cardSold,
+                    { opacity: pressed ? 0.95 : 1 },
+                  ]}
                   onPress={() => {
+                    if (confirmSoldId) { setConfirmSoldId(null); return; }
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                     router.push(`/product/${item.id}`);
                   }}
@@ -111,23 +125,40 @@ export default function MyListingsScreen() {
                   {item.image_url ? (
                     <View style={styles.thumb}>
                       <Image source={{ uri: item.image_url }} style={styles.thumbImg} contentFit="cover" transition={200} />
+                      {item.status === "sold" && (
+                        <View style={styles.soldOverlay}>
+                          <Text style={styles.soldOverlayText}>SOLD</Text>
+                        </View>
+                      )}
                     </View>
                   ) : (
                     <View style={[styles.thumb, styles.thumbPlaceholder]}>
-                      <Feather name={(CATEGORY_ICONS[item.category] ?? "package") as any} size={24} color={C.primary} />
+                      <Feather name={(CATEGORY_ICONS[item.category] ?? "package") as any} size={24} color={item.status === "sold" ? "#9CA3AF" : C.primary} />
+                      {item.status === "sold" && (
+                        <View style={styles.soldOverlay}>
+                          <Text style={styles.soldOverlayText}>SOLD</Text>
+                        </View>
+                      )}
                     </View>
                   )}
 
                   <View style={{ flex: 1, gap: 5 }}>
                     <View style={styles.cardTopRow}>
-                      <Text style={styles.cardTitle} numberOfLines={1}>{item.title}</Text>
-                      <View style={[styles.statusBadge, { backgroundColor: status.bg }]}>
-                        <Text style={[styles.statusText, { color: status.text }]}>{item.status ?? "active"}</Text>
+                      <Text style={[styles.cardTitle, item.status === "sold" && styles.cardTitleSold]} numberOfLines={1}>
+                        {item.title}
+                      </Text>
+                      <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}>
+                        <Text style={[styles.statusText, { color: statusStyle.text }]}>
+                          {item.status === "sold" ? "Sold" : item.status ?? "active"}
+                        </Text>
                       </View>
                     </View>
                     <Text style={styles.cardDesc} numberOfLines={1}>{item.description}</Text>
                     <View style={styles.cardMeta}>
-                      <Text style={styles.price}>R{Number(item.price).toFixed(2)}<Text style={styles.unit}>/{item.unit}</Text></Text>
+                      <Text style={styles.price}>
+                        R{Number(item.price).toFixed(2)}
+                        <Text style={styles.unit}>/{item.unit}</Text>
+                      </Text>
                       <View style={styles.metaChip}>
                         <Feather name="map-pin" size={11} color={C.textSecondary} />
                         <Text style={styles.metaText}>{item.location}</Text>
@@ -136,43 +167,46 @@ export default function MyListingsScreen() {
                         <Feather name="package" size={11} color={C.textSecondary} />
                         <Text style={styles.metaText}>{item.quantity} {item.unit}</Text>
                       </View>
-                      {item.image_url && (
-                        <View style={styles.metaChip}>
-                          <Feather name="camera" size={11} color={C.primary} />
-                          <Text style={[styles.metaText, { color: C.primary }]}>Photo</Text>
-                        </View>
-                      )}
                     </View>
+
                     {item.status === "active" && (
-                      <Pressable
-                        style={({ pressed }) => [styles.soldBtn, { opacity: pressed ? 0.8 : 1 }]}
-                        onPress={(e) => {
-                          e.stopPropagation();
-                          Alert.alert(
-                            "Mark as Sold?",
-                            `This will remove "${item.title}" from the marketplace. It will still appear in your listings as sold.`,
-                            [
-                              { text: "Cancel", style: "cancel" },
-                              {
-                                text: "Mark as Sold",
-                                style: "destructive",
-                                onPress: () => {
-                                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                                  markAsSold.mutate(item.id, { onSuccess: () => refetch() });
-                                },
-                              },
-                            ]
-                          );
-                        }}
-                      >
-                        <Feather name="check-circle" size={13} color="#6B7280" />
-                        <Text style={styles.soldBtnText}>Mark as Sold</Text>
-                      </Pressable>
+                      isPendingConfirm ? (
+                        <View style={styles.confirmRow}>
+                          <Text style={styles.confirmText}>Remove from marketplace?</Text>
+                          <View style={styles.confirmBtns}>
+                            <Pressable
+                              style={styles.confirmNo}
+                              onPress={(e) => { e.stopPropagation(); setConfirmSoldId(null); }}
+                            >
+                              <Text style={styles.confirmNoText}>Cancel</Text>
+                            </Pressable>
+                            <Pressable
+                              style={[styles.confirmYes, { opacity: markAsSold.isPending ? 0.7 : 1 }]}
+                              onPress={(e) => { e.stopPropagation(); handleMarkSold(item.id); }}
+                              disabled={markAsSold.isPending}
+                            >
+                              {markAsSold.isPending
+                                ? <ActivityIndicator size="small" color="#fff" />
+                                : <Text style={styles.confirmYesText}>Mark as Sold</Text>
+                              }
+                            </Pressable>
+                          </View>
+                        </View>
+                      ) : (
+                        <Pressable
+                          style={({ pressed }) => [styles.soldBtn, { opacity: pressed ? 0.8 : 1 }]}
+                          onPress={(e) => { e.stopPropagation(); handleMarkSold(item.id); }}
+                        >
+                          <Feather name="check-circle" size={13} color="#6B7280" />
+                          <Text style={styles.soldBtnText}>Mark as Sold</Text>
+                        </Pressable>
+                      )
                     )}
+
                     {item.status === "sold" && (
                       <View style={styles.soldStamp}>
                         <Feather name="check-circle" size={13} color="#6B7280" />
-                        <Text style={styles.soldStampText}>Sold</Text>
+                        <Text style={styles.soldStampText}>No longer visible in marketplace</Text>
                       </View>
                     )}
                   </View>
@@ -202,11 +236,19 @@ const styles = StyleSheet.create({
   summaryNum: { fontSize: 22, fontFamily: "Inter_700Bold", color: C.text },
   summaryLbl: { fontSize: 12, fontFamily: "Inter_400Regular", color: C.textSecondary },
   card: { flexDirection: "row", alignItems: "flex-start", gap: 14, backgroundColor: C.surface, borderRadius: 16, padding: 14, borderWidth: 1, borderColor: C.border },
-  thumb: { width: 64, height: 64, borderRadius: 12, overflow: "hidden", flexShrink: 0 },
+  cardSold: { backgroundColor: "#FAFAFA", borderColor: "#E5E7EB" },
+  thumb: { width: 64, height: 64, borderRadius: 12, overflow: "hidden", flexShrink: 0, position: "relative" },
   thumbImg: { width: 64, height: 64 },
   thumbPlaceholder: { backgroundColor: `${C.primary}12`, alignItems: "center", justifyContent: "center" },
+  soldOverlay: {
+    position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: "rgba(0,0,0,0.45)", alignItems: "center", justifyContent: "center",
+    borderRadius: 12,
+  },
+  soldOverlayText: { fontSize: 10, fontFamily: "Inter_700Bold", color: "#fff", letterSpacing: 1 },
   cardTopRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   cardTitle: { flex: 1, fontSize: 15, fontFamily: "Inter_600SemiBold", color: C.text },
+  cardTitleSold: { color: C.textSecondary },
   statusBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
   statusText: { fontSize: 11, fontFamily: "Inter_600SemiBold" },
   cardDesc: { fontSize: 13, fontFamily: "Inter_400Regular", color: C.textSecondary },
@@ -215,30 +257,22 @@ const styles = StyleSheet.create({
   unit: { fontSize: 11, fontFamily: "Inter_400Regular", color: C.textSecondary },
   metaChip: { flexDirection: "row", alignItems: "center", gap: 3 },
   metaText: { fontSize: 11, fontFamily: "Inter_400Regular", color: C.textSecondary },
+  confirmRow: { gap: 8, marginTop: 4 },
+  confirmText: { fontSize: 12, fontFamily: "Inter_500Medium", color: C.text },
+  confirmBtns: { flexDirection: "row", gap: 8 },
+  confirmNo: { flex: 1, height: 34, borderRadius: 8, borderWidth: 1, borderColor: C.border, alignItems: "center", justifyContent: "center" },
+  confirmNoText: { fontSize: 12, fontFamily: "Inter_600SemiBold", color: C.textSecondary },
+  confirmYes: { flex: 2, height: 34, borderRadius: 8, backgroundColor: "#374151", alignItems: "center", justifyContent: "center" },
+  confirmYesText: { fontSize: 12, fontFamily: "Inter_700Bold", color: "#fff" },
   soldBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    alignSelf: "flex-start",
-    borderWidth: 1,
-    borderColor: C.border,
-    borderRadius: 7,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    marginTop: 2,
-    backgroundColor: C.surfaceSecondary,
+    flexDirection: "row", alignItems: "center", gap: 5, alignSelf: "flex-start",
+    borderWidth: 1, borderColor: C.border, borderRadius: 7,
+    paddingHorizontal: 10, paddingVertical: 5, marginTop: 2, backgroundColor: C.surfaceSecondary,
   },
   soldBtnText: { fontSize: 12, fontFamily: "Inter_500Medium", color: "#6B7280" },
   soldStamp: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    alignSelf: "flex-start",
-    backgroundColor: "#E5E7EB",
-    borderRadius: 7,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    marginTop: 2,
+    flexDirection: "row", alignItems: "center", gap: 5, alignSelf: "flex-start",
+    borderRadius: 7, paddingHorizontal: 10, paddingVertical: 5, marginTop: 2,
   },
-  soldStampText: { fontSize: 12, fontFamily: "Inter_500Medium", color: "#6B7280" },
+  soldStampText: { fontSize: 12, fontFamily: "Inter_500Medium", color: "#9CA3AF" },
 });

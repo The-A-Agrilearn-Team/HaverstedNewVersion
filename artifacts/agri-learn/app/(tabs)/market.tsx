@@ -2,7 +2,7 @@ import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { Image } from "expo-image";
 import { router } from "expo-router";
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -17,6 +17,26 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "@/context/AuthContext";
 import Colors from "@/constants/colors";
 import { useListings, useMyListings } from "@/hooks/useListings";
+import { supabase } from "@/lib/supabase";
+
+async function syncSoldListings() {
+  const { data: orders } = await supabase
+    .from("orders")
+    .select("listing_id")
+    .in("status", ["confirmed", "ready_for_pickup", "completed"])
+    .not("listing_id", "is", null);
+
+  if (!orders || orders.length === 0) return;
+
+  const listingIds = [...new Set(orders.map((o: any) => o.listing_id).filter(Boolean))];
+  if (listingIds.length === 0) return;
+
+  await supabase
+    .from("product_listings")
+    .update({ status: "sold" })
+    .in("id", listingIds)
+    .eq("status", "active");
+}
 
 const C = Colors.light;
 
@@ -37,6 +57,7 @@ export default function MarketScreen() {
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState("All");
   const [viewMode, setViewMode] = useState<"all" | "mine">("all");
+  const synced = useRef(false);
 
   const isFarmer = user && (profile?.role === "farmer" || profile?.role === "admin");
 
@@ -44,6 +65,15 @@ export default function MarketScreen() {
   const { data: myListings = [], isLoading: myLoading, refetch: myRefetch } = useMyListings(
     isFarmer ? user?.id : undefined
   );
+
+  useEffect(() => {
+    if (synced.current) return;
+    synced.current = true;
+    syncSoldListings().then(() => {
+      refetch();
+      myRefetch();
+    }).catch(() => {});
+  }, []);
 
   const sourceListings = viewMode === "mine" ? myListings : allListings;
   const sourceLoading = viewMode === "mine" ? myLoading : isLoading;
