@@ -124,6 +124,21 @@ export default function CreateListingScreen() {
     );
   }
 
+  if (profile?.suspended) {
+    return (
+      <View style={[styles.accessDenied, { paddingTop: insets.top + 60 }]}>
+        <Feather name="slash" size={40} color="#DC2626" />
+        <Text style={[styles.accessTitle, { color: "#DC2626" }]}>Account Suspended</Text>
+        <Text style={styles.accessText}>
+          Your account has been suspended due to multiple low-star reviews. You cannot create new listings at this time. Please contact support if you believe this is an error.
+        </Text>
+        <Pressable style={[styles.backBtn, { backgroundColor: "#F3F4F6" }]} onPress={() => router.back()}>
+          <Text style={[styles.backBtnText, { color: "#6B7280" }]}>Go Back</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
   const validate = () => {
     const e: Record<string, string> = {};
     if (!title.trim() || title.trim().length < 3) e.title = "Title must be at least 3 characters";

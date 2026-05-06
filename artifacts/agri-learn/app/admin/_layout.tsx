@@ -16,6 +16,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "@/context/AuthContext";
 import ADMIN_CONFIG from "@/constants/adminConfig";
+import { useFlaggedFarmers } from "@/hooks/useAdmin";
 
 const SIDEBAR_BG = "#1B3A2A";
 const SIDEBAR_ACTIVE = "#2D6A4F";
@@ -26,11 +27,12 @@ const SIDEBAR_WIDTH = 260;
 const BREAKPOINT = 768;
 
 const MAIN_NAV = [
-  { id: "index",    label: "Dashboard",  icon: "grid",         path: "/admin" },
-  { id: "users",    label: "Users",      icon: "users",        path: "/admin/users" },
-  { id: "modules",  label: "Modules",    icon: "book-open",    path: "/admin/modules" },
-  { id: "listings", label: "Market",     icon: "shopping-bag", path: "/admin/listings" },
-  { id: "logs",     label: "Settings",   icon: "settings",     path: "/admin/logs" },
+  { id: "index",    label: "Dashboard",  icon: "grid",           path: "/admin" },
+  { id: "users",    label: "Users",      icon: "users",          path: "/admin/users" },
+  { id: "alerts",   label: "Alerts",     icon: "alert-triangle", path: "/admin/alerts" },
+  { id: "modules",  label: "Modules",    icon: "book-open",      path: "/admin/modules" },
+  { id: "listings", label: "Market",     icon: "shopping-bag",   path: "/admin/listings" },
+  { id: "logs",     label: "Settings",   icon: "settings",       path: "/admin/logs" },
 ];
 
 function isPathActive(currentPath: string, itemPath: string) {
@@ -44,33 +46,38 @@ function AdminBottomNav({
   pathname,
   onSignOut,
   insets,
+  alertCount,
 }: {
   pathname: string;
   onSignOut: () => void;
   insets: { bottom: number };
+  alertCount: number;
 }) {
-  const allItems = [
-    ...MAIN_NAV,
-    { id: "logs", label: "Settings", icon: "settings", path: "/admin/logs" },
-  ];
-
   return (
     <View style={[bottomNav.container, { paddingBottom: Math.max(insets.bottom, 8) }]}>
-      {allItems.map((item) => {
+      {MAIN_NAV.map((item) => {
         const active = isPathActive(pathname, item.path);
+        const showBadge = item.id === "alerts" && alertCount > 0;
         return (
           <Pressable
             key={item.id}
             style={bottomNav.tab}
             onPress={() => router.replace(item.path as any)}
           >
-            <Feather
-              name={item.icon as any}
-              size={20}
-              color={active ? SIDEBAR_ACTIVE : "#9CA3AF"}
-            />
-            <Text style={[bottomNav.tabLabel, active && bottomNav.tabLabelActive]}>
-              {item.label === "Learning Modules" ? "Modules" : item.label}
+            <View style={{ position: "relative" }}>
+              <Feather
+                name={item.icon as any}
+                size={20}
+                color={active ? SIDEBAR_ACTIVE : (showBadge ? "#DC2626" : "#9CA3AF")}
+              />
+              {showBadge && (
+                <View style={bottomNav.badge}>
+                  <Text style={bottomNav.badgeText}>{alertCount > 9 ? "9+" : alertCount}</Text>
+                </View>
+              )}
+            </View>
+            <Text style={[bottomNav.tabLabel, active && bottomNav.tabLabelActive, showBadge && { color: "#DC2626" }]}>
+              {item.label}
             </Text>
           </Pressable>
         );
@@ -87,10 +94,12 @@ function AdminSidebar({
   pathname,
   profile,
   onSignOut,
+  alertCount,
 }: {
   pathname: string;
   profile: any;
   onSignOut: () => void;
+  alertCount: number;
 }) {
   const initials = (profile?.full_name ?? "SA")
     .split(" ")
@@ -99,8 +108,8 @@ function AdminSidebar({
     .toUpperCase()
     .slice(0, 2);
 
-  const sidebarNav = MAIN_NAV.slice(0, 4);
-  const accountNav = MAIN_NAV.slice(4);
+  const sidebarNav = MAIN_NAV.slice(0, 5);
+  const accountNav = MAIN_NAV.slice(5);
 
   return (
     <View style={sidebar.container}>
@@ -117,6 +126,7 @@ function AdminSidebar({
       <Text style={sidebar.sectionLabel}>MAIN MENU</Text>
       {sidebarNav.map((item) => {
         const active = isPathActive(pathname, item.path);
+        const showBadge = item.id === "alerts" && alertCount > 0;
         return (
           <Pressable
             key={item.id}
@@ -131,6 +141,11 @@ function AdminSidebar({
             <Text style={[sidebar.navLabel, active && sidebar.navLabelActive]}>
               {item.label}
             </Text>
+            {showBadge && (
+              <View style={sidebar.alertBadge}>
+                <Text style={sidebar.alertBadgeText}>{alertCount > 9 ? "9+" : alertCount}</Text>
+              </View>
+            )}
           </Pressable>
         );
       })}
@@ -186,9 +201,11 @@ function AdminSidebar({
 function AdminBottomBar({
   pathname,
   onSignOut,
+  alertCount,
 }: {
   pathname: string;
   onSignOut: () => void;
+  alertCount: number;
 }) {
   const insets = useSafeAreaInsets();
 
@@ -196,18 +213,26 @@ function AdminBottomBar({
     <View style={[bottomBar.container, { paddingBottom: insets.bottom || 8 }]}>
       {MAIN_NAV.map((item) => {
         const active = isPathActive(pathname, item.path);
+        const showBadge = item.id === "alerts" && alertCount > 0;
         return (
           <Pressable
             key={item.id}
             style={bottomBar.tab}
             onPress={() => router.replace(item.path as any)}
           >
-            <Feather
-              name={item.icon as any}
-              size={22}
-              color={active ? "#2D6A4F" : "#9CA3AF"}
-            />
-            <Text style={[bottomBar.label, active && bottomBar.labelActive]}>
+            <View style={{ position: "relative" }}>
+              <Feather
+                name={item.icon as any}
+                size={22}
+                color={active ? "#2D6A4F" : (showBadge ? "#DC2626" : "#9CA3AF")}
+              />
+              {showBadge && (
+                <View style={bottomBar.badge}>
+                  <Text style={bottomBar.badgeText}>{alertCount > 9 ? "9+" : alertCount}</Text>
+                </View>
+              )}
+            </View>
+            <Text style={[bottomBar.label, active && bottomBar.labelActive, showBadge && { color: "#DC2626" }]}>
               {item.label}
             </Text>
           </Pressable>
@@ -223,6 +248,8 @@ export default function AdminLayout() {
   const pathname = usePathname();
   const { width } = useWindowDimensions();
   const isMobile = width < MOBILE_BREAKPOINT;
+  const { data: flagged = [] } = useFlaggedFarmers();
+  const alertCount = (flagged as any[]).filter((f) => !f.suspended).length;
 
   const [verified, setVerified] = useState(false);
 
@@ -363,6 +390,7 @@ export default function AdminLayout() {
     <Stack screenOptions={{ headerShown: false, animation: "none" }}>
       <Stack.Screen name="index" />
       <Stack.Screen name="users" />
+      <Stack.Screen name="alerts" />
       <Stack.Screen name="listings" />
       <Stack.Screen name="modules" />
       <Stack.Screen name="logs" />
@@ -380,12 +408,19 @@ export default function AdminLayout() {
             <Text style={mobileHeader.title}>AgriLearn</Text>
             <Text style={mobileHeader.badge}>Admin</Text>
           </View>
+          {alertCount > 0 && (
+            <View style={mobileHeader.alertPill}>
+              <Feather name="alert-triangle" size={12} color="#DC2626" />
+              <Text style={mobileHeader.alertPillText}>{alertCount} alert{alertCount !== 1 ? "s" : ""}</Text>
+            </View>
+          )}
         </View>
         <View style={{ flex: 1 }}>{stackContent}</View>
         <AdminBottomNav
           pathname={pathname}
           onSignOut={handleSignOut}
           insets={insets}
+          alertCount={alertCount}
         />
       </View>
     );
@@ -393,7 +428,7 @@ export default function AdminLayout() {
 
   return (
     <View style={{ flex: 1, flexDirection: "row", backgroundColor: "#F0F4F2" }}>
-      <AdminSidebar pathname={pathname} profile={profile} onSignOut={handleSignOut} />
+      <AdminSidebar pathname={pathname} profile={profile} onSignOut={handleSignOut} alertCount={alertCount} />
       <View style={{ flex: 1 }}>{stackContent}</View>
     </View>
   );
@@ -508,6 +543,21 @@ const sidebar = StyleSheet.create({
     fontFamily: "Inter_500Medium",
     color: SIDEBAR_MUTED,
   },
+  alertBadge: {
+    marginLeft: "auto" as any,
+    backgroundColor: "#DC2626",
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 5,
+  },
+  alertBadgeText: {
+    fontSize: 10,
+    fontFamily: "Inter_700Bold",
+    color: "#fff",
+  },
 });
 
 const mobileHeader = StyleSheet.create({
@@ -550,6 +600,20 @@ const mobileHeader = StyleSheet.create({
   signOutBtn: {
     padding: 6,
   },
+  alertPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: "#FEE2E2",
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  alertPillText: {
+    fontSize: 11,
+    fontFamily: "Inter_700Bold",
+    color: "#DC2626",
+  },
 });
 
 const bottomBar = StyleSheet.create({
@@ -575,6 +639,23 @@ const bottomBar = StyleSheet.create({
   labelActive: {
     color: "#2D6A4F",
     fontFamily: "Inter_600SemiBold",
+  },
+  badge: {
+    position: "absolute",
+    top: -4,
+    right: -6,
+    backgroundColor: "#DC2626",
+    borderRadius: 8,
+    minWidth: 16,
+    height: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 3,
+  },
+  badgeText: {
+    fontSize: 9,
+    fontFamily: "Inter_700Bold",
+    color: "#fff",
   },
 });
 
@@ -731,5 +812,22 @@ const bottomNav = StyleSheet.create({
   tabLabelActive: {
     color: SIDEBAR_ACTIVE,
     fontFamily: "Inter_600SemiBold",
+  },
+  badge: {
+    position: "absolute",
+    top: -4,
+    right: -6,
+    backgroundColor: "#DC2626",
+    borderRadius: 8,
+    minWidth: 16,
+    height: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 3,
+  },
+  badgeText: {
+    fontSize: 9,
+    fontFamily: "Inter_700Bold",
+    color: "#fff",
   },
 });

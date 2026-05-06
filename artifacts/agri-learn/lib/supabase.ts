@@ -27,6 +27,7 @@ export interface Profile {
   location?: string;
   language_pref: string;
   created_at: string;
+  suspended?: boolean;
 }
 
 export interface LearningModule {
