@@ -1,5 +1,7 @@
 const origin = process.env.REPLIT_DEV_DOMAIN
   ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+  : process.env.EXPO_PUBLIC_API_URL
+  ? process.env.EXPO_PUBLIC_API_URL.replace("/api", "")
   : "http://localhost:5000";
 
 const baseConfig = require("./app.json");
