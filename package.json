@@ -31,4 +31,7 @@
     "prettier": "^3.8.1",
     "typescript": "~5.9.2"
   }
+  "pnpm": {
+    "onlyBuiltDependencies": ["@swc/core", "esbuild", "msw", "unrs-resolver"]
+  }
 }
