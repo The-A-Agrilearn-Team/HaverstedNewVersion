@@ -16,7 +16,7 @@
     "ios": { "supportsTablet": false },
     "android": {
       "package": "com.agrilearn.app",
-      "versionCode": 5,
+      "versionCode": 6,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#2D6A4F"

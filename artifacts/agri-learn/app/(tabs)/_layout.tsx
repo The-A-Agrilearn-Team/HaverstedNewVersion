@@ -36,16 +36,59 @@ export default function TabLayout() {
         },
         tabBarBackground: () =>
           isIOS ? (
-            <BlurView intensity={100} tint={isDark ? "dark" : "light"} style={StyleSheet.absoluteFill} />
+            <BlurView
+              intensity={100}
+              tint={isDark ? "dark" : "light"}
+              style={StyleSheet.absoluteFill}
+            />
           ) : isWeb ? (
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: isDark ? "#000" : "#fff" }]} />
+            <View
+              style={[
+                StyleSheet.absoluteFill,
+                { backgroundColor: isDark ? "#000" : "#fff" },
+              ]}
+            />
           ) : null,
       }}
     >
-      <Tabs.Screen name="index" options={{ title: "Home", tabBarIcon: ({ color }) => <Feather name="home" size={22} color={color} /> }} />
-      <Tabs.Screen name="learn" options={{ title: "Learn", href: showLearn ? undefined : null, tabBarIcon: ({ color }) => <Feather name="book-open" size={22} color={color} /> }} />
-      <Tabs.Screen name="market" options={{ title: "Market", tabBarIcon: ({ color }) => <Feather name="shopping-bag" size={22} color={color} /> }} />
-      <Tabs.Screen name="profile" options={{ title: "Profile", tabBarIcon: ({ color }) => <Feather name="user" size={22} color={color} /> }} />
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: "Home",
+          tabBarIcon: ({ color }) => (
+            <Feather name="home" size={22} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="learn"
+        options={{
+          title: "Learn",
+          href: showLearn ? undefined : null,
+          tabBarIcon: ({ color }) => (
+            <Feather name="book-open" size={22} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="market"
+        options={{
+          title: "Market",
+          tabBarIcon: ({ color }) => (
+            <Feather name="shopping-bag" size={22} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: "Profile",
+          tabBarIcon: ({ color }) => (
+            <Feather name="user" size={22} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen name="windows" options={{ href: null }} />
     </Tabs>
   );
 }
