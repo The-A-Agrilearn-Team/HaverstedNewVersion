@@ -82,9 +82,9 @@ export function ErrorFallback({ error, resetError }: ErrorFallbackProps) {
           Something went wrong
         </Text>
 
-        <Text style={[styles.message, { color: theme.textSecondary }]}>
-          Please reload the app to continue.
-        </Text>
+       <Text selectable style={[styles.message, { color: "red", fontSize: 12, textAlign: "left" }]}>
+        {error?.message ?? "Unknown error"}
+      </Text>
 
         <Pressable
           onPress={handleRestart}
