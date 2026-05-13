@@ -1,6 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import React from "react";
 import {
   ActivityIndicator,
@@ -16,6 +16,8 @@ import Colors from "@/constants/colors";
 import { useAuth } from "@/context/AuthContext";
 import { useBookmarks, useToggleBookmark } from "@/hooks/useProgress";
 import { useModules } from "@/hooks/useModules";
+import { LearningModule } from "@/lib/supabase";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const C = Colors.light;
 
@@ -25,15 +27,58 @@ const LEVEL_COLORS = {
   advanced:     { bg: "#FCE7F3", text: "#DB2777" },
 };
 
+const FALLBACK_MODULES: LearningModule[] = [
+  { id: "1", title: "Intro to Crop Rotation", description: "Improve soil health through strategic crop rotation techniques.", category: "Crops", level: "beginner", content: "", duration_minutes: 15, language: "en", created_at: "" },
+  { id: "2", title: "Water Management Basics", description: "Essential water conservation and irrigation techniques for South African farms.", category: "Irrigation", level: "beginner", content: "", duration_minutes: 20, language: "en", created_at: "" },
+  { id: "3", title: "Soil Testing & pH", description: "Learn to test your soil and adjust pH for optimal crop growth.", category: "Soil", level: "intermediate", content: "", duration_minutes: 25, language: "en", created_at: "" },
+  { id: "4", title: "Pest Identification Guide", description: "Identify common pests and choose the right control methods.", category: "Pest Control", level: "beginner", content: "", duration_minutes: 18, language: "en", created_at: "" },
+  { id: "5", title: "Selling at Farmers Markets", description: "How to price, present, and sell your produce at local markets.", category: "Business", level: "beginner", content: "", duration_minutes: 22, language: "en", created_at: "" },
+  { id: "6", title: "Livestock Health Basics", description: "Keep your animals healthy with preventive care and nutrition guidance.", category: "Livestock", level: "beginner", content: "", duration_minutes: 30, language: "en", created_at: "" },
+  { id: "7", title: "Growing Tomatoes: Complete Guide", description: "Step-by-step guide to planting, watering, nurturing, and harvesting tomatoes.", category: "Crops", level: "beginner", content: "", duration_minutes: 45, language: "en", created_at: "" },
+  { id: "8", title: "Growing Spinach: Complete Guide", description: "How to plant, water, feed, and harvest spinach for a continuous supply.", category: "Crops", level: "beginner", content: "", duration_minutes: 30, language: "en", created_at: "" },
+];
+
 export default function SavedModulesScreen() {
   const insets = useSafeAreaInsets();
-  const { user } = useAuth();
-  const { data: bookmarkIds = [], isLoading: bLoading, refetch: refetchBookmarks } = useBookmarks();
-  const { data: allModules = [], isLoading: mLoading } = useModules();
+  const { user, loading: authLoading } = useAuth();
+  const { data: bookmarkIds, isLoading: bLoading, refetch: refetchBookmarks } = useBookmarks();
+  const { data: remoteModules = [], isLoading: mLoading } = useModules();
   const toggleBookmark = useToggleBookmark();
 
-  const isLoading = bLoading || mLoading;
-  const saved = allModules.filter((m) => bookmarkIds.includes(m.id));
+  const [localIds, setLocalIds] = React.useState<string[] | null>(null);
+
+  const readLocalIds = React.useCallback(() => {
+    if (!user?.id) return;
+    AsyncStorage.getItem(`bookmarks_${user.id}`)
+      .then((raw) => setLocalIds(raw ? JSON.parse(raw) : []))
+      .catch(() => setLocalIds([]));
+  }, [user?.id]);
+
+  React.useEffect(() => {
+    if (user?.id) {
+      readLocalIds();
+    }
+  }, [user?.id, readLocalIds]);
+
+  useFocusEffect(React.useCallback(() => {
+    readLocalIds();
+    refetchBookmarks();
+  }, [readLocalIds]));
+
+  const mergedIds = React.useMemo(() => {
+    const fromQuery = bookmarkIds ?? [];
+    const fromLocal = localIds ?? [];
+    return Array.from(new Set([...fromQuery, ...fromLocal]));
+  }, [bookmarkIds, localIds]);
+
+  const allModules = React.useMemo(() => {
+    const ids = new Set(remoteModules.map((m) => m.id));
+    const extras = FALLBACK_MODULES.filter((m) => !ids.has(m.id));
+    return [...remoteModules, ...extras];
+  }, [remoteModules]);
+
+  const isLoading = authLoading || bLoading || mLoading || (!!user?.id && localIds === null);
+  const saved = allModules.filter((m) => mergedIds.includes(m.id));
 
   const handleRemove = (moduleId: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
