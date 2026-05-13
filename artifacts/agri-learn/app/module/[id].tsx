@@ -2,10 +2,12 @@ import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { router, useLocalSearchParams } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
   Platform,
   Pressable,
   ScrollView,
@@ -17,7 +19,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Colors from "@/constants/colors";
 import { supabase, LearningModule } from "@/lib/supabase";
-import { useMarkComplete, useToggleBookmark, useBookmarks } from "@/hooks/useProgress";
+import { useMarkComplete, useToggleBookmark, useBookmarks, useUpdateProgress } from "@/hooks/useProgress";
 import { useAuth } from "@/context/AuthContext";
 import { askModuleAssistant } from "@/lib/aiSearch";
 
@@ -70,6 +72,7 @@ export default function ModuleDetailScreen() {
   const { data: bookmarkedIds = [] } = useBookmarks();
   const toggleBookmark = useToggleBookmark();
   const markComplete = useMarkComplete();
+  const updateProgress = useUpdateProgress();
 
   const [completed, setCompleted] = useState(false);
   const isBookmarked = mod ? bookmarkedIds.includes(mod.id) : false;
@@ -79,6 +82,33 @@ export default function ModuleDetailScreen() {
   const [aiLoading, setAiLoading] = useState(false);
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
   const chatScrollRef = useRef<ScrollView>(null);
+  const lastSavedPct = useRef(-1);
+  const scrollThrottleRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (canAccess && mod?.id) {
+      updateProgress.mutate({ moduleId: mod.id, progressPct: 10 });
+      lastSavedPct.current = 10;
+    }
+  }, [canAccess, mod?.id]);
+
+  const handleScroll = useCallback(
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      if (!canAccess || !mod?.id || markComplete.isSuccess || completed) return;
+      const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
+      const scrollable = contentSize.height - layoutMeasurement.height;
+      if (scrollable <= 0) return;
+      const rawPct = Math.round((contentOffset.y / scrollable) * 90) + 10;
+      const pct = Math.min(rawPct, 90);
+      if (pct <= lastSavedPct.current) return;
+      lastSavedPct.current = pct;
+      if (scrollThrottleRef.current) clearTimeout(scrollThrottleRef.current);
+      scrollThrottleRef.current = setTimeout(() => {
+        updateProgress.mutate({ moduleId: mod.id, progressPct: pct });
+      }, 1500);
+    },
+    [canAccess, mod?.id, markComplete.isSuccess, completed]
+  );
 
   const handleMarkComplete = async () => {
     if (!user) {
@@ -221,6 +251,8 @@ export default function ModuleDetailScreen() {
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: insets.bottom + 120 }}
+          onScroll={handleScroll}
+          scrollEventThrottle={200}
         >
           <View style={styles.heroSection}>
             <View style={styles.heroIcon}>

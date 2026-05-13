@@ -70,37 +70,25 @@ export async function aiSearchServices(
   }
 }
 
-/**
- * ✅ FIXED: Module Assistant function
- * Now matches backend expectations
- */
 export async function askModuleAssistant(
   question: string,
-  moduleId: number
+  moduleTitle: string,
+  moduleContent: string
 ): Promise<string> {
   if (!question.trim()) return "";
 
   try {
     const response = await fetch(`${API_BASE_URL}/api/module-assist`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          moduleId: moduleId, // ✅ REQUIRED
-          question: question, // ✅ REQUIRED
-        }),
-      }
-    );
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question, moduleTitle, moduleContent }),
+    });
 
     if (!response.ok) {
       throw new Error(`API error: ${response.status}`);
     }
 
     const data = await response.json();
-
-    console.log("Module Assist Response:", data); // ✅ Debug log
-
     return data.answer ?? "No answer returned.";
   } catch (err) {
     console.warn("[moduleAssist] backend unavailable:", err);

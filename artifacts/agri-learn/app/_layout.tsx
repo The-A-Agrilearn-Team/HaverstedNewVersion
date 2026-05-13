@@ -41,6 +41,10 @@ function RootLayoutNav() {
       <Stack.Screen name="profile/chat" options={{ headerShown: false }} />
       <Stack.Screen name="profile/orders" options={{ headerShown: false }} />
       <Stack.Screen name="profile/order-detail" options={{ headerShown: false }} />
+      <Stack.Screen name="profile/my-progress" options={{ headerShown: false }} />
+      <Stack.Screen name="profile/saved-modules" options={{ headerShown: false }} />
+      <Stack.Screen name="profile/my-listings" options={{ headerShown: false }} />
+      <Stack.Screen name="profile/offline-content" options={{ headerShown: false }} />
     </Stack>
   );
 }

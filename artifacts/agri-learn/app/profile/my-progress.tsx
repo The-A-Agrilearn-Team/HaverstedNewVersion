@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Colors from "@/constants/colors";
 import { useProgress } from "@/hooks/useProgress";
 import { useModules } from "@/hooks/useModules";
+import { LearningModule } from "@/lib/supabase";
 
 const C = Colors.light;
 
@@ -23,10 +24,27 @@ const LEVEL_COLORS = {
   advanced:     { bg: "#FCE7F3", text: "#DB2777" },
 };
 
+const FALLBACK_MODULES: LearningModule[] = [
+  { id: "1", title: "Intro to Crop Rotation", description: "", category: "Crops", level: "beginner", content: "", duration_minutes: 15, language: "en", created_at: "" },
+  { id: "2", title: "Water Management Basics", description: "", category: "Irrigation", level: "beginner", content: "", duration_minutes: 20, language: "en", created_at: "" },
+  { id: "3", title: "Soil Testing & pH", description: "", category: "Soil", level: "intermediate", content: "", duration_minutes: 25, language: "en", created_at: "" },
+  { id: "4", title: "Pest Identification Guide", description: "", category: "Pest Control", level: "beginner", content: "", duration_minutes: 18, language: "en", created_at: "" },
+  { id: "5", title: "Selling at Farmers Markets", description: "", category: "Business", level: "beginner", content: "", duration_minutes: 22, language: "en", created_at: "" },
+  { id: "6", title: "Livestock Health Basics", description: "", category: "Livestock", level: "beginner", content: "", duration_minutes: 30, language: "en", created_at: "" },
+  { id: "7", title: "Growing Tomatoes: Complete Guide", description: "", category: "Crops", level: "beginner", content: "", duration_minutes: 45, language: "en", created_at: "" },
+  { id: "8", title: "Growing Spinach: Complete Guide", description: "", category: "Crops", level: "beginner", content: "", duration_minutes: 30, language: "en", created_at: "" },
+];
+
 export default function MyProgressScreen() {
   const insets = useSafeAreaInsets();
   const { data: progressRecords, isLoading: pLoading, refetch } = useProgress();
-  const { data: allModules = [], isLoading: mLoading } = useModules();
+  const { data: remoteModules = [], isLoading: mLoading } = useModules();
+
+  const allModules = React.useMemo(() => {
+    const ids = new Set(remoteModules.map((m) => m.id));
+    const extras = FALLBACK_MODULES.filter((m) => !ids.has(m.id));
+    return [...remoteModules, ...extras];
+  }, [remoteModules]);
 
   const isLoading = pLoading || mLoading;
 
