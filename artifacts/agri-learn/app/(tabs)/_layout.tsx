@@ -12,7 +12,7 @@ import { useAuth } from "@/context/AuthContext";
 const C = Colors.light;
 
 function canAccessLearning(role?: string | null) {
-  return role === "farmer" || role === "admin";
+  return role === "farmer" || role === "buyer" || role === "retailer" || role === "admin";
 }
 
 function NativeTabLayout() {

@@ -38,6 +38,26 @@ async function fetchListings(category?: string): Promise<ProductListing[]> {
   })) as ProductListing[];
 }
 
+export function useListingCount() {
+  return useQuery({
+    queryKey: ["listings", "count"],
+    queryFn: async () => {
+      try {
+        const { count, error } = await supabase
+          .from("product_listings")
+          .select("*", { count: "exact", head: true })
+          .eq("status", "active");
+        if (error || count === null) return MOCK_LISTINGS.length;
+        return count > 0 ? count : MOCK_LISTINGS.length;
+      } catch {
+        return MOCK_LISTINGS.length;
+      }
+    },
+    staleTime: 2 * 60 * 1000,
+    retry: false,
+  });
+}
+
 export function useListings(category?: string) {
   return useQuery({
     queryKey: ["listings", category],
@@ -69,6 +89,25 @@ export function useRecentListings() {
   });
 }
 
+export function useMyListings(farmerId?: string) {
+  return useQuery({
+    queryKey: ["listings", "mine", farmerId],
+    queryFn: async () => {
+      if (!farmerId) return [];
+      const { data, error } = await supabase
+        .from("product_listings")
+        .select("*")
+        .eq("farmer_id", farmerId)
+        .order("created_at", { ascending: false });
+      if (error || !data) return [];
+      return data as ProductListing[];
+    },
+    enabled: !!farmerId,
+    staleTime: 60 * 1000,
+    retry: false,
+  });
+}
+
 export function useCreateListing() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -80,6 +119,22 @@ export function useCreateListing() {
         .single();
       if (error) throw error;
       return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["listings"] });
+    },
+  });
+}
+
+export function useMarkAsSold() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (listingId: string) => {
+      const { error } = await supabase
+        .from("product_listings")
+        .update({ status: "sold" })
+        .eq("id", listingId);
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["listings"] });

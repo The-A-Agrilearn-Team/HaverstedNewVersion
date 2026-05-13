@@ -6,9 +6,8 @@
     "strict": true,
     "jsx": "react-native",
     "paths": {
-      "@/*": [
-        "./*"
-      ]
+      "@/*": ["./*"],
+      "expo-video": ["./node_modules/expo-video/build/index"]
     }
   },
   "include": [

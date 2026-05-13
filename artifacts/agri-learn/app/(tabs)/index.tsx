@@ -13,213 +13,341 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "@/context/AuthContext";
-import Colors from "@/constants/colors";
-import { useFeaturedModules } from "@/hooks/useModules";
-import { useRecentListings } from "@/hooks/useListings";
+import { useModuleCount } from "@/hooks/useModules";
+import { useListingCount, useRecentListings } from "@/hooks/useListings";
+import { useUnreadCount } from "@/hooks/useNotifications";
 
-const C = Colors.light;
+const PRIMARY = "#2D6A4F";
+const PRIMARY_DARK = "#1B4332";
+const LIME = "#52B788";
+const LIME_LIGHT = "#B7E4C7";
+const LIME_PALE = "#D8F3DC";
+const WHITE = "#FFFFFF";
+const BG = "#F0FAF4";
+const TEXT = "#1A2E22";
+const TEXT_SUB = "#4B7A62";
+const ORANGE = "#F2994A";
 
-const CATEGORIES = [
-  { label: "Crops",        icon: "sun",         color: "#52B788" },
-  { label: "Livestock",    icon: "heart",        color: "#F2994A" },
-  { label: "Irrigation",   icon: "droplet",      color: "#3B82F6" },
-  { label: "Soil",         icon: "layers",       color: "#92400E" },
-  { label: "Pest Control", icon: "shield",       color: "#DC2626" },
-  { label: "Business",     icon: "trending-up",  color: "#7C3AED" },
+const QUICK_ACCESS = [
+  {
+    label: "Learning\nModules",
+    icon: "book-open",
+    color: PRIMARY,
+    bg: LIME_PALE,
+    route: "/(tabs)/learn",
+  },
+  {
+    label: "Market\nplace",
+    icon: "shopping-bag",
+    color: "#1D6A7E",
+    bg: "#DBEAFE",
+    route: "/(tabs)/market",
+  },
+  {
+    label: "Service\nWindow",
+    icon: "tool",
+    color: "#7C3AED",
+    bg: "#EDE9FE",
+    route: "/(tabs)/windows",
+  },
+];
+
+const LATEST_UPDATES = [
+  {
+    icon: "book",
+    color: PRIMARY,
+    bg: LIME_PALE,
+    label: "New Module",
+    value: "Organic Pest Control",
+  },
+  {
+    icon: "package",
+    color: ORANGE,
+    bg: "#FEF3C7",
+    label: "Fresh Produce",
+    value: "Tomatoes available near you",
+  },
+  {
+    icon: "settings",
+    color: "#7C3AED",
+    bg: "#EDE9FE",
+    label: "Tractor Services",
+    value: "3 providers near you",
+  },
 ];
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { user, profile } = useAuth();
-  const [refreshKey, setRefreshKey] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
 
-  const { data: modules = [], isLoading: modulesLoading, refetch: refetchModules } = useFeaturedModules();
-  const { data: listings = [], isLoading: listingsLoading, refetch: refetchListings } = useRecentListings();
+  const { data: recentListings = [], refetch: refetchListings } =
+    useRecentListings();
+  const { data: unreadCount = 0 } = useUnreadCount();
+  const { data: moduleCount = 8 } = useModuleCount();
+  const { data: listingCount = 6 } = useListingCount();
 
-  const greeting = () => {
-    const h = new Date().getHours();
-    if (h < 12) return "Good morning";
-    if (h < 17) return "Good afternoon";
-    return "Good evening";
-  };
+  const firstName =
+    profile?.full_name?.split(" ")[0] ?? (user ? "Farmer" : "Friend");
+  const initials = profile?.full_name
+    ? profile.full_name
+        .split(" ")
+        .map((w: string) => w[0])
+        .slice(0, 2)
+        .join("")
+        .toUpperCase()
+    : "G";
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([refetchModules(), refetchListings()]);
+    await refetchListings();
     setRefreshing(false);
   };
 
-  const firstName = profile?.full_name?.split(" ")[0] ?? (user ? "Farmer" : "Guest");
-
   return (
     <ScrollView
-      style={{ flex: 1, backgroundColor: C.background }}
+      style={{ flex: 1, backgroundColor: BG }}
       contentInsetAdjustmentBehavior="automatic"
       refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.primary} />
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          tintColor={PRIMARY}
+        />
       }
       showsVerticalScrollIndicator={false}
     >
-      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
-        <View>
-          <Text style={styles.greeting}>{greeting()},</Text>
-          <Text style={styles.name}>{firstName}</Text>
+      {/* ── Header ─────────────────────────────────────── */}
+      <View style={[styles.header, { paddingTop: insets.top + 14 }]}>
+        <View style={styles.logoRow}>
+          <View style={styles.logoIcon}>
+            <Feather name="feather" size={16} color={WHITE} />
+          </View>
+          <Text style={styles.logoText}>AgriLearn</Text>
         </View>
-        <View style={styles.headerActions}>
-          {!user && (
-            <Pressable
-              style={styles.signInBadge}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                router.push("/(auth)/login");
-              }}
-            >
-              <Text style={styles.signInBadgeText}>Sign In</Text>
-            </Pressable>
-          )}
-          <Pressable style={styles.notifButton}>
-            <Feather name="bell" size={22} color={C.text} />
+
+        <View style={styles.headerRight}>
+          <Pressable
+            style={styles.notifBtn}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              router.push(
+                user ? ("/profile/messages" as any) : "/(auth)/login",
+              );
+            }}
+          >
+            <Feather name="bell" size={20} color={TEXT} />
+            {unreadCount > 0 && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </Text>
+              </View>
+            )}
+          </Pressable>
+
+          <Pressable
+            style={styles.avatar}
+            onPress={() =>
+              router.push(user ? "/(tabs)/profile" : "/(auth)/login")
+            }
+          >
+            <Text style={styles.avatarText}>{initials}</Text>
           </Pressable>
         </View>
       </View>
 
-      {!user && (
-        <Pressable
-          style={styles.guestBanner}
-          onPress={() => router.push("/(auth)/login")}
-        >
-          <Feather name="info" size={16} color={C.primary} />
-          <Text style={styles.guestBannerText}>
-            Sign in to save progress, bookmark modules, and list your produce.
-          </Text>
-          <Feather name="chevron-right" size={14} color={C.primary} />
-        </Pressable>
-      )}
-
-      <View style={styles.statsRow}>
-        <View style={styles.statCard}>
-          <Text style={styles.statNumber}>{modules.length || 6}</Text>
-          <Text style={styles.statLabel}>Modules</Text>
-        </View>
-        <View style={[styles.statCard, styles.statCardCenter]}>
-          <Text style={styles.statNumber}>{listings.length || 6}</Text>
-          <Text style={styles.statLabel}>Listings</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statNumber}>5</Text>
-          <Text style={styles.statLabel}>Languages</Text>
-        </View>
+      {/* ── Welcome ────────────────────────────────────── */}
+      <View style={styles.welcome}>
+        <Text style={styles.welcomeTitle}>Welcome back, {firstName}! 👋</Text>
+        <Text style={styles.welcomeSub}>
+          Learn, connect and grow your farming business
+        </Text>
       </View>
 
+      {/* ── Banner ─────────────────────────────────────── */}
+      <View style={styles.banner}>
+        <View style={styles.bannerLeft}>
+          <Text style={styles.bannerTag}>🌿 Season's Best</Text>
+          <Text style={styles.bannerHeading}>
+            Grow smarter,{"\n"}farm better
+          </Text>
+          <Text style={styles.bannerSub}>
+            Practical guides built for{"\n"}South African conditions
+          </Text>
+          <Pressable
+            style={styles.bannerBtn}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              router.push("/(tabs)/learn");
+            }}
+          >
+            <Text style={styles.bannerBtnText}>Explore</Text>
+            <Feather name="arrow-right" size={14} color={PRIMARY} />
+          </Pressable>
+        </View>
+
+        <View style={styles.bannerRight}>
+          <View style={styles.bannerOrb1} />
+          <View style={styles.bannerOrb2} />
+          <View style={styles.bannerStats}>
+            <View style={styles.bannerStatPill}>
+              <Text style={styles.bannerStatNum}>{moduleCount}</Text>
+              <Text style={styles.bannerStatLabel}>Modules</Text>
+            </View>
+            <View style={[styles.bannerStatPill, { marginTop: 10 }]}>
+              <Text style={styles.bannerStatNum}>{listingCount}</Text>
+              <Text style={styles.bannerStatLabel}>Listings</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* decorative leaf blobs */}
+        <View style={styles.bannerBlob1} />
+        <View style={styles.bannerBlob2} />
+      </View>
+
+      {/* ── Quick Access ───────────────────────────────── */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Browse Topics</Text>
-        <View style={styles.categoriesGrid}>
-          {CATEGORIES.map((cat) => (
+        <Text style={styles.sectionTitle}>Quick Access</Text>
+        <View style={styles.quickRow}>
+          {QUICK_ACCESS.map((item) => (
             <Pressable
-              key={cat.label}
-              style={({ pressed }) => [styles.categoryChip, { opacity: pressed ? 0.7 : 1 }]}
+              key={item.label}
+              style={({ pressed }) => [
+                styles.quickCard,
+                { opacity: pressed ? 0.85 : 1 },
+              ]}
               onPress={() => {
                 Haptics.selectionAsync();
-                router.push("/(tabs)/learn");
+                router.push(item.route as any);
               }}
             >
-              <View style={[styles.categoryIcon, { backgroundColor: `${cat.color}18` }]}>
-                <Feather name={cat.icon as any} size={18} color={cat.color} />
+              <View
+                style={[styles.quickIconWrap, { backgroundColor: item.bg }]}
+              >
+                <Feather name={item.icon as any} size={22} color={item.color} />
               </View>
-              <Text style={styles.categoryLabel}>{cat.label}</Text>
+              <Text style={styles.quickLabel}>{item.label}</Text>
             </Pressable>
           ))}
         </View>
       </View>
 
+      {/* ── Latest Updates ─────────────────────────────── */}
       <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Featured Modules</Text>
-          <Pressable onPress={() => router.push("/(tabs)/learn")}>
-            <Text style={styles.seeAll}>See all</Text>
-          </Pressable>
-        </View>
-        {modulesLoading ? (
-          <ActivityIndicator color={C.primary} style={{ paddingLeft: 20 }} />
-        ) : (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingHorizontal: 20, gap: 14 }}
-          >
-            {modules.slice(0, 4).map((mod) => (
-              <Pressable
-                key={mod.id}
-                style={({ pressed }) => [styles.moduleCard, { opacity: pressed ? 0.95 : 1 }]}
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  router.push(`/module/${mod.id}`);
-                }}
-              >
-                <View style={styles.moduleMeta}>
-                  <View style={[styles.levelBadge, {
-                    backgroundColor: mod.level === "beginner" ? "#D1FAE5" : mod.level === "intermediate" ? "#FEF3C7" : "#FCE7F3"
-                  }]}>
-                    <Text style={[styles.levelText, {
-                      color: mod.level === "beginner" ? "#059669" : mod.level === "intermediate" ? "#D97706" : "#DB2777"
-                    }]}>{mod.level}</Text>
-                  </View>
-                  <View style={styles.moduleDurationRow}>
-                    <Feather name="clock" size={11} color={C.textSecondary} />
-                    <Text style={styles.moduleDuration}>{mod.duration_minutes}m</Text>
-                  </View>
-                </View>
-                <Text style={styles.moduleTitle}>{mod.title}</Text>
-                <Text style={styles.moduleDesc} numberOfLines={2}>{mod.description}</Text>
-                <View style={styles.moduleFooter}>
-                  <Text style={styles.moduleCategory}>{mod.category}</Text>
-                  <Feather name="arrow-right" size={16} color={C.primary} />
-                </View>
-              </Pressable>
-            ))}
-          </ScrollView>
-        )}
-      </View>
-
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Recent Listings</Text>
+        <View style={styles.sectionRow}>
+          <Text style={styles.sectionTitle}>Latest Updates</Text>
           <Pressable onPress={() => router.push("/(tabs)/market")}>
             <Text style={styles.seeAll}>See all</Text>
           </Pressable>
         </View>
-        {listingsLoading ? (
-          <ActivityIndicator color={C.primary} style={{ paddingLeft: 20 }} />
-        ) : (
-          <View style={styles.listingsCol}>
-            {listings.slice(0, 3).map((item) => (
+
+        <View style={styles.updatesList}>
+          {LATEST_UPDATES.map((item, i) => (
+            <Pressable
+              key={i}
+              style={({ pressed }) => [
+                styles.updateCard,
+                { opacity: pressed ? 0.9 : 1 },
+              ]}
+              onPress={() => {
+                Haptics.selectionAsync();
+                if (i === 0) router.push("/(tabs)/learn");
+                else router.push("/(tabs)/market");
+              }}
+            >
+              <View style={[styles.updateIcon, { backgroundColor: item.bg }]}>
+                <Feather name={item.icon as any} size={18} color={item.color} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.updateLabel}>{item.label}</Text>
+                <Text style={styles.updateValue}>{item.value}</Text>
+              </View>
+              <Feather name="chevron-right" size={16} color={TEXT_SUB} />
+            </Pressable>
+          ))}
+        </View>
+      </View>
+
+      {/* ── Recent Produce ─────────────────────────────── */}
+      {recentListings.length > 0 && (
+        <View style={styles.section}>
+          <View style={styles.sectionRow}>
+            <Text style={styles.sectionTitle}>Fresh Produce</Text>
+            <Pressable onPress={() => router.push("/(tabs)/market")}>
+              <Text style={styles.seeAll}>See all</Text>
+            </Pressable>
+          </View>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: 20, gap: 12 }}
+          >
+            {recentListings.slice(0, 5).map((item) => (
               <Pressable
                 key={item.id}
-                style={({ pressed }) => [styles.listingCard, { opacity: pressed ? 0.95 : 1 }]}
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  router.push(`/product/${item.id}`);
-                }}
+                style={({ pressed }) => [
+                  styles.produceCard,
+                  { opacity: pressed ? 0.9 : 1 },
+                ]}
+                onPress={() => router.push(`/product/${item.id}` as any)}
               >
-                <View style={styles.listingIconBox}>
-                  <Feather name="package" size={22} color={C.primary} />
+                <View style={styles.produceIconBox}>
+                  <Feather name="package" size={20} color={PRIMARY} />
                 </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.listingTitle}>{item.title}</Text>
-                  <Text style={styles.listingFarmer}>
-                    {item.farmer_name} · {item.location}
-                  </Text>
-                </View>
-                <View style={{ alignItems: "flex-end" }}>
-                  <Text style={styles.listingPrice}>R{Number(item.price).toFixed(2)}</Text>
-                  <Text style={styles.listingUnit}>per {item.unit}</Text>
-                </View>
+                <Text style={styles.produceTitle} numberOfLines={1}>
+                  {item.title}
+                </Text>
+                <Text style={styles.producePrice}>
+                  R{Number(item.price).toFixed(2)}
+                </Text>
+                <Text style={styles.produceUnit}>per {item.unit}</Text>
               </Pressable>
             ))}
-          </View>
-        )}
+          </ScrollView>
+        </View>
+      )}
+
+      {/* ── CTA ────────────────────────────────────────── */}
+      <View style={styles.ctaCard}>
+        <View style={styles.ctaOrb} />
+        <Feather
+          name="trending-up"
+          size={28}
+          color={WHITE}
+          style={{ marginBottom: 10 }}
+        />
+        <Text style={styles.ctaTitle}>Keep learning,{"\n"}keep growing!</Text>
+        <Text style={styles.ctaSub}>
+          Access {moduleCount}+ farming modules built for South Africa
+        </Text>
+        <Pressable
+          style={styles.ctaBtn}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            if (user) router.push("/(tabs)/learn");
+            else router.push("/(auth)/login");
+          }}
+        >
+          <Feather name="book-open" size={16} color={PRIMARY} />
+          <Text style={styles.ctaBtnText}>Start Learning</Text>
+        </Pressable>
       </View>
+
+      {/* ── Sign in nudge for guests ────────────────────── */}
+      {!user && (
+        <Pressable
+          style={styles.guestNudge}
+          onPress={() => router.push("/(auth)/login")}
+        >
+          <Feather name="log-in" size={15} color={PRIMARY} />
+          <Text style={styles.guestNudgeText}>
+            Sign in to track progress & list your produce
+          </Text>
+          <Feather name="chevron-right" size={14} color={PRIMARY} />
+        </Pressable>
+      )}
 
       <View style={{ height: 100 }} />
     </ScrollView>
@@ -227,157 +355,373 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
+  /* Header */
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-start",
+    alignItems: "center",
     paddingHorizontal: 20,
-    paddingBottom: 20,
+    paddingBottom: 8,
+    backgroundColor: BG,
   },
-  greeting: { fontSize: 14, fontFamily: "Inter_400Regular", color: C.textSecondary },
-  name: { fontSize: 26, fontFamily: "Inter_700Bold", color: C.text },
-  headerActions: { flexDirection: "row", alignItems: "center", gap: 10 },
-  signInBadge: {
-    backgroundColor: C.primary,
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-  },
-  signInBadgeText: { color: "#fff", fontSize: 13, fontFamily: "Inter_600SemiBold" },
-  notifButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: C.surfaceSecondary,
+  logoRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  logoIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: PRIMARY,
     alignItems: "center",
     justifyContent: "center",
   },
-  guestBanner: {
-    flexDirection: "row",
+  logoText: { fontSize: 20, fontFamily: "Inter_700Bold", color: PRIMARY },
+  headerRight: { flexDirection: "row", alignItems: "center", gap: 10 },
+  notifBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: WHITE,
     alignItems: "center",
-    backgroundColor: `${C.primary}10`,
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  badge: {
+    position: "absolute",
+    top: -2,
+    right: -2,
+    backgroundColor: "#EF4444",
+    borderRadius: 9,
+    minWidth: 18,
+    height: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 3,
+    borderWidth: 1.5,
+    borderColor: BG,
+  },
+  badgeText: { fontSize: 9, fontFamily: "Inter_700Bold", color: WHITE },
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: LIME,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: LIME_LIGHT,
+  },
+  avatarText: { fontSize: 14, fontFamily: "Inter_700Bold", color: WHITE },
+
+  /* Welcome */
+  welcome: { paddingHorizontal: 20, paddingTop: 6, paddingBottom: 18 },
+  welcomeTitle: { fontSize: 22, fontFamily: "Inter_700Bold", color: TEXT },
+  welcomeSub: {
+    fontSize: 14,
+    fontFamily: "Inter_400Regular",
+    color: TEXT_SUB,
+    marginTop: 3,
+  },
+
+  /* Banner */
+  banner: {
     marginHorizontal: 20,
-    borderRadius: 12,
-    padding: 12,
-    gap: 10,
+    marginBottom: 28,
+    borderRadius: 24,
+    backgroundColor: PRIMARY,
+    overflow: "hidden",
+    minHeight: 180,
+    flexDirection: "row",
+    padding: 24,
+    shadowColor: PRIMARY_DARK,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  bannerLeft: { flex: 1, justifyContent: "space-between", zIndex: 2 },
+  bannerTag: {
+    fontSize: 11,
+    fontFamily: "Inter_500Medium",
+    color: LIME_LIGHT,
+    backgroundColor: "rgba(255,255,255,0.12)",
+    alignSelf: "flex-start",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
+    overflow: "hidden",
+    marginBottom: 10,
+  },
+  bannerHeading: {
+    fontSize: 22,
+    fontFamily: "Inter_700Bold",
+    color: WHITE,
+    lineHeight: 28,
+    marginBottom: 6,
+  },
+  bannerSub: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: "rgba(255,255,255,0.72)",
+    lineHeight: 17,
     marginBottom: 16,
   },
-  guestBannerText: {
-    flex: 1,
-    fontSize: 13,
-    fontFamily: "Inter_400Regular",
-    color: C.primary,
-  },
-  statsRow: {
+  bannerBtn: {
     flexDirection: "row",
-    marginHorizontal: 20,
-    backgroundColor: C.primary,
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 24,
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: WHITE,
+    alignSelf: "flex-start",
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    borderRadius: 20,
   },
-  statCard: { flex: 1, alignItems: "center" },
-  statCardCenter: {
-    borderLeftWidth: 1,
-    borderRightWidth: 1,
-    borderColor: "rgba(255,255,255,0.2)",
+  bannerBtnText: {
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+    color: PRIMARY,
   },
-  statNumber: { fontSize: 28, fontFamily: "Inter_700Bold", color: "#fff" },
-  statLabel: { fontSize: 12, fontFamily: "Inter_400Regular", color: "rgba(255,255,255,0.75)" },
+  bannerRight: {
+    width: 90,
+    alignItems: "flex-end",
+    justifyContent: "center",
+    zIndex: 2,
+  },
+  bannerOrb1: {
+    position: "absolute",
+    right: -20,
+    top: -20,
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    backgroundColor: "rgba(255,255,255,0.07)",
+  },
+  bannerOrb2: {
+    position: "absolute",
+    right: 20,
+    top: 30,
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: "rgba(255,255,255,0.05)",
+  },
+  bannerStats: { gap: 8 },
+  bannerStatPill: {
+    backgroundColor: "rgba(255,255,255,0.15)",
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    alignItems: "center",
+    backdropFilter: "blur(4px)",
+  },
+  bannerStatNum: { fontSize: 22, fontFamily: "Inter_700Bold", color: WHITE },
+  bannerStatLabel: {
+    fontSize: 10,
+    fontFamily: "Inter_400Regular",
+    color: "rgba(255,255,255,0.75)",
+  },
+  bannerBlob1: {
+    position: "absolute",
+    bottom: -30,
+    left: 100,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: "rgba(82,183,136,0.18)",
+  },
+  bannerBlob2: {
+    position: "absolute",
+    bottom: 10,
+    left: 140,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "rgba(82,183,136,0.12)",
+  },
+
+  /* Section */
   section: { marginBottom: 28 },
-  sectionHeader: {
+  sectionRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 20,
     marginBottom: 14,
   },
-  sectionTitle: { fontSize: 18, fontFamily: "Inter_600SemiBold", color: C.text },
-  seeAll: { fontSize: 14, fontFamily: "Inter_500Medium", color: C.primary },
-  categoriesGrid: {
+  sectionTitle: { fontSize: 17, fontFamily: "Inter_600SemiBold", color: TEXT },
+  seeAll: { fontSize: 13, fontFamily: "Inter_500Medium", color: PRIMARY },
+
+  /* Quick Access */
+  quickRow: {
     flexDirection: "row",
-    flexWrap: "wrap",
     paddingHorizontal: 20,
-    gap: 10,
+    gap: 12,
   },
-  categoryChip: {
-    flexDirection: "row",
+  quickCard: {
+    flex: 1,
+    backgroundColor: WHITE,
+    borderRadius: 18,
+    paddingVertical: 18,
+    paddingHorizontal: 10,
     alignItems: "center",
-    gap: 8,
-    backgroundColor: C.surface,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderWidth: 1,
-    borderColor: C.border,
-    width: "30%",
-    flexGrow: 1,
+    gap: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  categoryIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
+  quickIconWrap: {
+    width: 52,
+    height: 52,
+    borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
   },
-  categoryLabel: { fontSize: 13, fontFamily: "Inter_500Medium", color: C.text },
-  moduleCard: {
-    width: 220,
-    backgroundColor: C.surface,
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: C.border,
-    gap: 8,
+  quickLabel: {
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
+    color: TEXT,
+    textAlign: "center",
+    lineHeight: 16,
   },
-  moduleMeta: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  levelBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
-  levelText: { fontSize: 11, fontFamily: "Inter_600SemiBold" },
-  moduleDurationRow: { flexDirection: "row", alignItems: "center", gap: 3 },
-  moduleDuration: { fontSize: 12, color: C.textSecondary, fontFamily: "Inter_400Regular" },
-  moduleTitle: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: C.text },
-  moduleDesc: {
-    fontSize: 13,
-    fontFamily: "Inter_400Regular",
-    color: C.textSecondary,
-    lineHeight: 18,
-  },
-  moduleFooter: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  moduleCategory: { fontSize: 12, fontFamily: "Inter_500Medium", color: C.primaryLight },
-  listingsCol: { paddingHorizontal: 20, gap: 10 },
-  listingCard: {
+
+  /* Updates */
+  updatesList: { paddingHorizontal: 20, gap: 10 },
+  updateCard: {
     flexDirection: "row",
     alignItems: "center",
     gap: 14,
-    backgroundColor: C.surface,
-    borderRadius: 14,
+    backgroundColor: WHITE,
+    borderRadius: 16,
     padding: 14,
-    borderWidth: 1,
-    borderColor: C.border,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
   },
-  listingIconBox: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    backgroundColor: `${C.primary}12`,
+  updateIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 13,
     alignItems: "center",
     justifyContent: "center",
   },
-  listingTitle: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: C.text },
-  listingFarmer: {
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
-    color: C.textSecondary,
-    marginTop: 2,
+  updateLabel: { fontSize: 11, fontFamily: "Inter_500Medium", color: TEXT_SUB },
+  updateValue: {
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+    color: TEXT,
+    marginTop: 1,
   },
-  listingPrice: { fontSize: 16, fontFamily: "Inter_700Bold", color: C.primary },
-  listingUnit: { fontSize: 11, fontFamily: "Inter_400Regular", color: C.textSecondary },
+
+  /* Produce cards */
+  produceCard: {
+    width: 130,
+    backgroundColor: WHITE,
+    borderRadius: 18,
+    padding: 14,
+    alignItems: "center",
+    gap: 6,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  produceIconBox: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: LIME_PALE,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 2,
+  },
+  produceTitle: {
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+    color: TEXT,
+    textAlign: "center",
+  },
+  producePrice: { fontSize: 15, fontFamily: "Inter_700Bold", color: PRIMARY },
+  produceUnit: {
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+    color: TEXT_SUB,
+  },
+
+  /* CTA */
+  ctaCard: {
+    marginHorizontal: 20,
+    marginBottom: 20,
+    borderRadius: 24,
+    backgroundColor: PRIMARY_DARK,
+    padding: 28,
+    alignItems: "center",
+    overflow: "hidden",
+    shadowColor: PRIMARY_DARK,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  ctaOrb: {
+    position: "absolute",
+    top: -40,
+    right: -40,
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    backgroundColor: "rgba(82,183,136,0.15)",
+  },
+  ctaTitle: {
+    fontSize: 24,
+    fontFamily: "Inter_700Bold",
+    color: WHITE,
+    textAlign: "center",
+    lineHeight: 30,
+    marginBottom: 8,
+  },
+  ctaSub: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    color: "rgba(255,255,255,0.65)",
+    textAlign: "center",
+    lineHeight: 19,
+    marginBottom: 22,
+  },
+  ctaBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: WHITE,
+    paddingHorizontal: 28,
+    paddingVertical: 13,
+    borderRadius: 30,
+  },
+  ctaBtnText: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: PRIMARY },
+
+  /* Guest nudge */
+  guestNudge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: LIME_PALE,
+    marginHorizontal: 20,
+    marginBottom: 8,
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: LIME_LIGHT,
+  },
+  guestNudgeText: {
+    flex: 1,
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    color: PRIMARY,
+  },
 });
