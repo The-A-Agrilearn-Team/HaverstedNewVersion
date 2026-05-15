@@ -13,6 +13,22 @@ export interface Progress {
 }
 
 const LOCAL_PROGRESS_KEY = (userId: string) => `progress_${userId}`;
+const LOCAL_BOOKMARKS_KEY = (userId: string) => `bookmarks_${userId}`;
+
+async function getLocalBookmarks(userId: string): Promise<string[]> {
+  try {
+    const raw = await AsyncStorage.getItem(LOCAL_BOOKMARKS_KEY(userId));
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+async function setLocalBookmarks(userId: string, ids: string[]): Promise<void> {
+  try {
+    await AsyncStorage.setItem(LOCAL_BOOKMARKS_KEY(userId), JSON.stringify(ids));
+  } catch {}
+}
 
 async function getLocalProgress(userId: string): Promise<Progress[]> {
   try {
@@ -147,19 +163,24 @@ export function useBookmarks() {
   return useQuery({
     queryKey: ["bookmarks", user?.id],
     enabled: !!user,
-    queryFn: async () => {
+    queryFn: async (): Promise<string[]> => {
+      const local = await getLocalBookmarks(user!.id);
+
       try {
         const { data, error } = await supabase
           .from("bookmarks")
           .select("module_id")
           .eq("user_id", user!.id);
-        if (error) return [] as string[];
-        return (data ?? []).map((b: any) => b.module_id as string);
+        if (error) return local;
+        const remote = (data ?? []).map((b: any) => b.module_id as string);
+        const merged = Array.from(new Set([...remote, ...local]));
+        return merged;
       } catch {
-        return [] as string[];
+        return local;
       }
     },
-    staleTime: 60 * 1000,
+    staleTime: 0,
+    refetchOnMount: "always",
     retry: false,
   });
 }
@@ -171,14 +192,27 @@ export function useToggleBookmark() {
   return useMutation({
     mutationFn: async ({ moduleId, isBookmarked }: { moduleId: string; isBookmarked: boolean }) => {
       if (!user) throw new Error("Not authenticated");
+
+      const local = await getLocalBookmarks(user.id);
+
       if (isBookmarked) {
-        await supabase.from("bookmarks").delete().eq("user_id", user.id).eq("module_id", moduleId);
+        const updated = local.filter((id) => id !== moduleId);
+        await setLocalBookmarks(user.id, updated);
+        try {
+          await supabase.from("bookmarks").delete().eq("user_id", user.id).eq("module_id", moduleId);
+        } catch {}
       } else {
-        await supabase.from("bookmarks").insert({ user_id: user.id, module_id: moduleId });
+        if (!local.includes(moduleId)) {
+          await setLocalBookmarks(user.id, [...local, moduleId]);
+        }
+        try {
+          await supabase.from("bookmarks").insert({ user_id: user.id, module_id: moduleId });
+        } catch {}
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["bookmarks", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["profileStats", user?.id] });
     },
   });
 }
@@ -280,23 +314,30 @@ export function useProfileStats() {
       const local = await getLocalProgress(user!.id);
       const localCompleted = local.filter((r) => r.completed).length;
 
+      const localBookmarks = await getLocalBookmarks(user!.id);
+
       try {
         const [progressRes, bookmarksRes, listingsRes] = await Promise.all([
           supabase.from("learning_progress").select("id").eq("user_id", user!.id).eq("completed", true),
-          supabase.from("bookmarks").select("id").eq("user_id", user!.id),
+          supabase.from("bookmarks").select("module_id").eq("user_id", user!.id),
           supabase.from("product_listings").select("id").eq("farmer_id", user!.id),
         ]);
-        const remoteIds = new Set(
+        const remoteProgressIds = new Set(
           (progressRes.data ?? []).map((r: any) => r.id)
         );
         const localOnlyCompleted = local.filter(
-          (r) => r.completed && !remoteIds.has(r.id)
+          (r) => r.completed && !remoteProgressIds.has(r.id)
         ).length;
         completed = (progressRes.data?.length ?? 0) + localOnlyCompleted;
-        bookmarks = bookmarksRes.data?.length ?? 0;
+        const remoteBookmarkIds = new Set(
+          (bookmarksRes.data ?? []).map((b: any) => b.module_id as string)
+        );
+        const localOnlyBookmarks = localBookmarks.filter((id) => !remoteBookmarkIds.has(id)).length;
+        bookmarks = remoteBookmarkIds.size + localOnlyBookmarks;
         listings = listingsRes.data?.length ?? 0;
       } catch {
         completed = localCompleted;
+        bookmarks = localBookmarks.length;
       }
 
       return { completed, bookmarks, listings };

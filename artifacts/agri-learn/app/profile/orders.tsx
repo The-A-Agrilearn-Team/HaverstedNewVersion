@@ -1,7 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import { router } from "expo-router";
-import React, { useState } from "react";
+import { router, useFocusEffect } from "expo-router";
+import React, { useCallback } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -18,156 +18,100 @@ import { useOrders, Order } from "@/hooks/useOrders";
 
 const C = Colors.light;
 
-const STATUS_CONFIG: Record<Order["status"], { label: string; bg: string; color: string; icon: string }> = {
-  confirmed:        { label: "Confirmed",        bg: "#DBEAFE", color: "#2563EB", icon: "check-circle" },
-  ready_for_pickup: { label: "Ready for Pickup", bg: "#FEF3C7", color: "#D97706", icon: "package" },
-  completed:        { label: "Completed",        bg: "#D1FAE5", color: "#059669", icon: "star" },
-  cancelled:        { label: "Cancelled",        bg: "#FEE2E2", color: "#DC2626", icon: "x-circle" },
+const STATUS_CONFIG: Record<Order["status"], { label: string; color: string; bg: string; icon: string }> = {
+  confirmed:        { label: "Confirmed",        color: "#2563EB", bg: "#EFF6FF", icon: "check-circle" },
+  ready_for_pickup: { label: "Ready for Pickup", color: "#D97706", bg: "#FFFBEB", icon: "package" },
+  completed:        { label: "Completed",        color: "#059669", bg: "#F0FDF4", icon: "check-circle" },
+  cancelled:        { label: "Cancelled",        color: "#DC2626", bg: "#FEF2F2", icon: "x-circle" },
 };
 
-type Tab = "all" | "buying" | "selling";
-
-const TABS: { key: Tab; label: string }[] = [
-  { key: "all",     label: "All Orders" },
-  { key: "buying",  label: "Buying" },
-  { key: "selling", label: "Selling" },
-];
-
-function StatusBadge({ status }: { status: Order["status"] }) {
-  const cfg = STATUS_CONFIG[status];
-  return (
-    <View style={[styles.badge, { backgroundColor: cfg.bg }]}>
-      <Feather name={cfg.icon as any} size={11} color={cfg.color} />
-      <Text style={[styles.badgeText, { color: cfg.color }]}>{cfg.label}</Text>
-    </View>
-  );
-}
-
-function OrderCard({ order, userId }: { order: Order; userId: string }) {
-  const isBuyer = order.buyer_id === userId;
-  const otherParty = isBuyer ? order.farmer_name : order.buyer_name;
-  const otherRole  = isBuyer ? "Farmer" : "Buyer";
-  const total = (order.quantity * order.price_per_unit).toFixed(2);
-  const date = new Date(order.created_at).toLocaleDateString([], {
-    day: "numeric", month: "short", year: "numeric",
-  });
-
-  return (
-    <Pressable
-      style={({ pressed }) => [styles.card, { opacity: pressed ? 0.85 : 1 }]}
-      onPress={() => {
-        Haptics.selectionAsync();
-        router.push({ pathname: "/profile/order-detail", params: { orderId: order.id } });
-      }}
-    >
-      <View style={styles.cardTop}>
-        <View style={styles.cardTopLeft}>
-          <Text style={styles.listingTitle}>{order.listing_title}</Text>
-          <StatusBadge status={order.status} />
-        </View>
-        <Feather name="chevron-right" size={18} color={C.textTertiary} />
-      </View>
-
-      <View style={styles.divider} />
-
-      <View style={styles.cardMeta}>
-        <View style={styles.metaItem}>
-          <Feather name="user" size={13} color={C.textSecondary} />
-          <Text style={styles.metaLabel}>{otherRole}</Text>
-          <Text style={styles.metaValue}>{otherParty}</Text>
-        </View>
-        <View style={styles.metaItem}>
-          <Feather name="layers" size={13} color={C.textSecondary} />
-          <Text style={styles.metaLabel}>Qty</Text>
-          <Text style={styles.metaValue}>{order.quantity} {order.unit}</Text>
-        </View>
-        <View style={styles.metaItem}>
-          <Feather name="tag" size={13} color={C.textSecondary} />
-          <Text style={styles.metaLabel}>Total</Text>
-          <Text style={[styles.metaValue, { color: C.primary }]}>R{total}</Text>
-        </View>
-      </View>
-
-      <View style={styles.cardBottom}>
-        <View style={[styles.rolePill, isBuyer ? styles.rolePillBuyer : styles.rolePillSeller]}>
-          <Text style={[styles.rolePillText, isBuyer ? styles.rolePillTextBuyer : styles.rolePillTextSeller]}>
-            {isBuyer ? "Buying" : "Selling"}
-          </Text>
-        </View>
-        <Text style={styles.dateText}>{date}</Text>
-      </View>
-    </Pressable>
-  );
-}
-
-function EmptyState({ tab }: { tab: Tab }) {
-  const messages: Record<Tab, { icon: string; title: string; body: string }> = {
-    all:     { icon: "shopping-bag", title: "No orders yet",         body: "Your orders will appear here once you buy or sell produce." },
-    buying:  { icon: "shopping-cart", title: "No purchases yet",     body: "Browse the market and make an offer to get started." },
-    selling: { icon: "sun",          title: "No sales yet",          body: "When buyers accept your listings, orders will appear here." },
-  };
-  const m = messages[tab];
-  return (
-    <View style={styles.emptyWrap}>
-      <View style={styles.emptyIcon}>
-        <Feather name={m.icon as any} size={32} color={C.primary} />
-      </View>
-      <Text style={styles.emptyTitle}>{m.title}</Text>
-      <Text style={styles.emptyBody}>{m.body}</Text>
-      {tab !== "selling" && (
-        <Pressable
-          style={({ pressed }) => [styles.emptyBtn, { opacity: pressed ? 0.8 : 1 }]}
-          onPress={() => router.push("/(tabs)/market")}
-        >
-          <Text style={styles.emptyBtnText}>Browse Market</Text>
-        </Pressable>
-      )}
-    </View>
-  );
+function timeAgo(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const days = Math.floor(diff / 86400000);
+  if (days === 0) return "Today";
+  if (days === 1) return "Yesterday";
+  if (days < 7) return `${days}d ago`;
+  return new Date(iso).toLocaleDateString([], { day: "numeric", month: "short" });
 }
 
 export default function OrdersScreen() {
   const insets = useSafeAreaInsets();
-  const { user } = useAuth();
-  const { data: orders = [], isLoading, refetch, isRefetching } = useOrders();
-  const [activeTab, setActiveTab] = useState<Tab>("all");
+  const { user, profile } = useAuth();
+  const { data: orders = [], isLoading, refetch } = useOrders();
 
-  const filtered = orders.filter((o) => {
-    if (activeTab === "buying")  return o.buyer_id === user?.id;
-    if (activeTab === "selling") return o.farmer_id === user?.id;
-    return true;
-  });
+  useFocusEffect(useCallback(() => { refetch(); }, []));
 
-  if (!user) {
+  const buyerOrders  = orders.filter((o) => o.buyer_id  === user?.id);
+  const farmerOrders = orders.filter((o) => o.farmer_id === user?.id);
+
+  const renderOrder = (order: Order) => {
+    const cfg = STATUS_CONFIG[order.status];
+    const isBuyer = order.buyer_id === user?.id;
+    const counterparty = isBuyer ? order.farmer_name : order.buyer_name;
+    const total = (order.quantity * order.price_per_unit).toFixed(2);
+
     return (
-      <View style={[styles.root, { paddingTop: insets.top }]}>
-        <View style={styles.navBar}>
-          <Pressable style={styles.navBtn} onPress={() => router.back()}>
-            <Feather name="arrow-left" size={22} color={C.text} />
-          </Pressable>
-          <Text style={styles.navTitle}>My Orders</Text>
-          <View style={styles.navBtn} />
-        </View>
-        <View style={styles.emptyWrap}>
-          <View style={styles.emptyIcon}>
-            <Feather name="lock" size={32} color={C.primary} />
+      <Pressable
+        key={order.id}
+        style={({ pressed }) => [styles.card, { opacity: pressed ? 0.93 : 1 }]}
+        onPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          router.push(`/profile/order-detail?orderId=${order.id}` as any);
+        }}
+      >
+        <View style={styles.cardTop}>
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text style={styles.cardTitle} numberOfLines={1}>{order.listing_title}</Text>
+            <View style={styles.counterpartyRow}>
+              <Feather name="user" size={11} color={C.textSecondary} />
+              <Text style={styles.counterpartyText}>
+                {isBuyer ? "Farmer" : "Buyer"}: {counterparty}
+              </Text>
+            </View>
           </View>
-          <Text style={styles.emptyTitle}>Sign in to view orders</Text>
-          <Text style={styles.emptyBody}>You need to be signed in to see your purchase and sale history.</Text>
-          <Pressable
-            style={({ pressed }) => [styles.emptyBtn, { opacity: pressed ? 0.8 : 1 }]}
-            onPress={() => router.push("/(auth)/login")}
-          >
-            <Text style={styles.emptyBtnText}>Sign In</Text>
-          </Pressable>
+          <View style={[styles.statusBadge, { backgroundColor: cfg.bg }]}>
+            <Feather name={cfg.icon as any} size={11} color={cfg.color} />
+            <Text style={[styles.statusText, { color: cfg.color }]}>{cfg.label}</Text>
+          </View>
         </View>
-      </View>
+
+        <View style={styles.cardDivider} />
+
+        <View style={styles.cardBottom}>
+          <View style={styles.metaItem}>
+            <Text style={styles.metaLabel}>Quantity</Text>
+            <Text style={styles.metaValue}>{order.quantity} {order.unit}</Text>
+          </View>
+          <View style={styles.metaItem}>
+            <Text style={styles.metaLabel}>Price/unit</Text>
+            <Text style={styles.metaValue}>R{Number(order.price_per_unit).toFixed(2)}</Text>
+          </View>
+          <View style={styles.metaItem}>
+            <Text style={styles.metaLabel}>Total</Text>
+            <Text style={[styles.metaValue, styles.totalValue]}>R{total}</Text>
+          </View>
+          <Text style={styles.dateText}>{timeAgo(order.created_at)}</Text>
+        </View>
+      </Pressable>
     );
-  }
+  };
+
+  const renderSection = (title: string, list: Order[]) => (
+    <View style={styles.section}>
+      <Text style={styles.sectionLabel}>{title}</Text>
+      {list.length === 0 ? (
+        <View style={styles.emptySection}>
+          <Text style={styles.emptySectionText}>No orders here yet.</Text>
+        </View>
+      ) : (
+        list.map(renderOrder)
+      )}
+    </View>
+  );
 
   return (
-    <View style={[styles.root, { paddingTop: insets.top }]}>
-      <View style={styles.navBar}>
+    <View style={{ flex: 1, backgroundColor: C.background }}>
+      <View style={[styles.navBar, { paddingTop: insets.top + 8 }]}>
         <Pressable style={styles.navBtn} onPress={() => router.back()}>
           <Feather name="arrow-left" size={22} color={C.text} />
         </Pressable>
@@ -175,142 +119,77 @@ export default function OrdersScreen() {
         <View style={styles.navBtn} />
       </View>
 
-      {/* Tabs */}
-      <View style={styles.tabRow}>
-        {TABS.map((t) => (
-          <Pressable
-            key={t.key}
-            style={[styles.tab, activeTab === t.key && styles.tabActive]}
-            onPress={() => {
-              Haptics.selectionAsync();
-              setActiveTab(t.key);
-            }}
-          >
-            <Text style={[styles.tabText, activeTab === t.key && styles.tabTextActive]}>
-              {t.label}
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refetch} tintColor={C.primary} />}
+        contentContainerStyle={{ padding: 16, gap: 8, paddingBottom: insets.bottom + 60 }}
+      >
+        {isLoading ? (
+          <ActivityIndicator color={C.primary} style={{ paddingTop: 80 }} />
+        ) : orders.length === 0 ? (
+          <View style={styles.empty}>
+            <View style={styles.emptyIcon}>
+              <Feather name="shopping-bag" size={36} color={C.textTertiary} />
+            </View>
+            <Text style={styles.emptyTitle}>No orders yet</Text>
+            <Text style={styles.emptySub}>
+              Orders are created when a farmer accepts your offer in a chat conversation.
             </Text>
-            {activeTab === t.key && filtered.length > 0 && (
-              <View style={styles.tabCount}>
-                <Text style={styles.tabCountText}>{filtered.length}</Text>
-              </View>
-            )}
-          </Pressable>
-        ))}
-      </View>
-
-      {isLoading ? (
-        <View style={styles.loadingWrap}>
-          <ActivityIndicator size="large" color={C.primary} />
-          <Text style={styles.loadingText}>Loading orders…</Text>
-        </View>
-      ) : (
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={[
-            styles.list,
-            filtered.length === 0 && styles.listEmpty,
-            { paddingBottom: insets.bottom + 32 },
-          ]}
-          refreshControl={
-            <RefreshControl
-              refreshing={isRefetching}
-              onRefresh={refetch}
-              tintColor={C.primary}
-              colors={[C.primary]}
-            />
-          }
-        >
-          {filtered.length === 0 ? (
-            <EmptyState tab={activeTab} />
-          ) : (
-            filtered.map((order) => (
-              <OrderCard key={order.id} order={order} userId={user.id} />
-            ))
-          )}
-        </ScrollView>
-      )}
+            <Pressable style={styles.ctaBtn} onPress={() => router.replace("/(tabs)/market")}>
+              <Feather name="shopping-bag" size={15} color={C.primary} />
+              <Text style={styles.ctaBtnText}>Browse Marketplace</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <>
+            {buyerOrders.length > 0 && renderSection("As Buyer", buyerOrders)}
+            {farmerOrders.length > 0 && renderSection("As Farmer", farmerOrders)}
+          </>
+        )}
+      </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: C.background },
-
   navBar: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
     paddingHorizontal: 16, paddingBottom: 12,
-    borderBottomWidth: 1, borderBottomColor: C.border,
+    backgroundColor: C.background, borderBottomWidth: 1, borderBottomColor: C.border,
   },
-  navBtn: {
-    width: 40, height: 40, borderRadius: 20,
-    backgroundColor: C.surfaceSecondary, alignItems: "center", justifyContent: "center",
-  },
+  navBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: C.surfaceSecondary, alignItems: "center", justifyContent: "center" },
   navTitle: { fontSize: 17, fontFamily: "Inter_600SemiBold", color: C.text },
-
-  tabRow: {
-    flexDirection: "row", paddingHorizontal: 16, paddingTop: 12, paddingBottom: 4, gap: 8,
+  section: { gap: 10 },
+  sectionLabel: {
+    fontSize: 13, fontFamily: "Inter_600SemiBold", color: C.textSecondary,
+    textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2, marginTop: 8,
   },
-  tab: {
-    flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
-    paddingVertical: 8, borderRadius: 10,
-    backgroundColor: C.surfaceSecondary,
-  },
-  tabActive: { backgroundColor: C.primary },
-  tabText: { fontSize: 13, fontFamily: "Inter_500Medium", color: C.textSecondary },
-  tabTextActive: { color: "#fff" },
-  tabCount: {
-    backgroundColor: "rgba(255,255,255,0.25)", borderRadius: 8,
-    paddingHorizontal: 6, paddingVertical: 1,
-  },
-  tabCountText: { fontSize: 11, fontFamily: "Inter_700Bold", color: "#fff" },
-
-  loadingWrap: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12 },
-  loadingText: { fontSize: 14, fontFamily: "Inter_400Regular", color: C.textSecondary },
-
-  list: { padding: 16, gap: 12 },
-  listEmpty: { flex: 1 },
-
   card: {
-    backgroundColor: C.surface, borderRadius: 16,
-    borderWidth: 1, borderColor: C.border, padding: 14, gap: 10,
+    backgroundColor: C.surface, borderRadius: 16, padding: 14,
+    borderWidth: 1, borderColor: C.border,
   },
-  cardTop: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 8 },
-  cardTopLeft: { flex: 1, gap: 6 },
-  listingTitle: { fontSize: 16, fontFamily: "Inter_700Bold", color: C.text },
-
-  badge: {
+  cardTop: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
+  cardTitle: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: C.text },
+  counterpartyRow: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 2 },
+  counterpartyText: { fontSize: 12, fontFamily: "Inter_400Regular", color: C.textSecondary },
+  statusBadge: {
     flexDirection: "row", alignItems: "center", gap: 4,
-    alignSelf: "flex-start", borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4,
+    borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, flexShrink: 0,
   },
-  badgeText: { fontSize: 11, fontFamily: "Inter_600SemiBold" },
-
-  divider: { height: 1, backgroundColor: C.borderLight },
-
-  cardMeta: { flexDirection: "row", gap: 8 },
-  metaItem: { flex: 1, gap: 2 },
+  statusText: { fontSize: 11, fontFamily: "Inter_600SemiBold" },
+  cardDivider: { height: 1, backgroundColor: C.border, marginVertical: 10 },
+  cardBottom: { flexDirection: "row", alignItems: "center", gap: 16 },
+  metaItem: { gap: 2 },
   metaLabel: { fontSize: 10, fontFamily: "Inter_400Regular", color: C.textTertiary, textTransform: "uppercase" },
   metaValue: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: C.text },
-
-  cardBottom: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  rolePill: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
-  rolePillBuyer: { backgroundColor: "#EFF6FF" },
-  rolePillSeller: { backgroundColor: "#F0FDF4" },
-  rolePillText: { fontSize: 11, fontFamily: "Inter_600SemiBold" },
-  rolePillTextBuyer: { color: "#2563EB" },
-  rolePillTextSeller: { color: "#059669" },
-  dateText: { fontSize: 12, fontFamily: "Inter_400Regular", color: C.textTertiary },
-
-  emptyWrap: { flex: 1, alignItems: "center", justifyContent: "center", padding: 32, gap: 12 },
-  emptyIcon: {
-    width: 72, height: 72, borderRadius: 36,
-    backgroundColor: `${C.primary}15`, alignItems: "center", justifyContent: "center",
-    marginBottom: 4,
-  },
-  emptyTitle: { fontSize: 18, fontFamily: "Inter_700Bold", color: C.text, textAlign: "center" },
-  emptyBody: { fontSize: 14, fontFamily: "Inter_400Regular", color: C.textSecondary, textAlign: "center", lineHeight: 20 },
-  emptyBtn: {
-    marginTop: 8, backgroundColor: C.primary, borderRadius: 12,
-    paddingHorizontal: 24, paddingVertical: 12,
-  },
-  emptyBtnText: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: "#fff" },
+  totalValue: { color: C.primary },
+  dateText: { marginLeft: "auto", fontSize: 12, fontFamily: "Inter_400Regular", color: C.textTertiary },
+  empty: { alignItems: "center", gap: 12, paddingVertical: 60, paddingHorizontal: 32 },
+  emptyIcon: { width: 80, height: 80, borderRadius: 40, backgroundColor: C.surfaceSecondary, alignItems: "center", justifyContent: "center" },
+  emptyTitle: { fontSize: 18, fontFamily: "Inter_600SemiBold", color: C.text },
+  emptySub: { fontSize: 14, fontFamily: "Inter_400Regular", color: C.textSecondary, textAlign: "center", lineHeight: 21 },
+  ctaBtn: { flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1.5, borderColor: C.primary, borderRadius: 12, paddingHorizontal: 20, paddingVertical: 10, marginTop: 4 },
+  ctaBtnText: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: C.primary },
+  emptySection: { backgroundColor: C.surface, borderRadius: 12, padding: 16, borderWidth: 1, borderColor: C.border },
+  emptySectionText: { fontSize: 14, fontFamily: "Inter_400Regular", color: C.textSecondary, textAlign: "center" },
 });

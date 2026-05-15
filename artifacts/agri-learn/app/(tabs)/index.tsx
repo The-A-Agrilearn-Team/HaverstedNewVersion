@@ -15,6 +15,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "@/context/AuthContext";
 import { useModuleCount } from "@/hooks/useModules";
 import { useListingCount, useRecentListings } from "@/hooks/useListings";
+import Colors from "@/constants/colors";
+import { useFeaturedModules } from "@/hooks/useModules";
+import { useRecentListings } from "@/hooks/useListings";
 import { useUnreadCount } from "@/hooks/useNotifications";
 
 const PRIMARY = "#2D6A4F";
@@ -81,11 +84,9 @@ export default function HomeScreen() {
   const { user, profile } = useAuth();
   const [refreshing, setRefreshing] = useState(false);
 
-  const { data: recentListings = [], refetch: refetchListings } =
-    useRecentListings();
+  const { data: modules = [], isLoading: modulesLoading, refetch: refetchModules } = useFeaturedModules();
+  const { data: listings = [], isLoading: listingsLoading, refetch: refetchListings } = useRecentListings();
   const { data: unreadCount = 0 } = useUnreadCount();
-  const { data: moduleCount = 8 } = useModuleCount();
-  const { data: listingCount = 6 } = useListingCount();
 
   const firstName =
     profile?.full_name?.split(" ")[0] ?? (user ? "Farmer" : "Friend");
@@ -125,34 +126,37 @@ export default function HomeScreen() {
           </View>
           <Text style={styles.logoText}>AgriLearn</Text>
         </View>
-
-        <View style={styles.headerRight}>
+        <View style={styles.headerActions}>
+          {!user && (
+            <Pressable
+              style={styles.signInBadge}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                router.push("/(auth)/login");
+              }}
+            >
+              <Text style={styles.signInBadgeText}>Sign In</Text>
+            </Pressable>
+          )}
           <Pressable
-            style={styles.notifBtn}
+            style={styles.notifButton}
             onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              router.push(
-                user ? ("/profile/messages" as any) : "/(auth)/login",
-              );
+              if (user) {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                router.push("/profile/messages");
+              } else {
+                router.push("/(auth)/login");
+              }
             }}
           >
-            <Feather name="bell" size={20} color={TEXT} />
+            <Feather name="bell" size={22} color={C.text} />
             {unreadCount > 0 && (
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>
-                  {unreadCount > 9 ? "9+" : unreadCount}
+              <View style={styles.notifBadge}>
+                <Text style={styles.notifBadgeText}>
+                  {unreadCount > 99 ? "99+" : unreadCount}
                 </Text>
               </View>
             )}
-          </Pressable>
-
-          <Pressable
-            style={styles.avatar}
-            onPress={() =>
-              router.push(user ? "/(tabs)/profile" : "/(auth)/login")
-            }
-          >
-            <Text style={styles.avatarText}>{initials}</Text>
           </Pressable>
         </View>
       </View>
@@ -307,32 +311,40 @@ export default function HomeScreen() {
             ))}
           </ScrollView>
         </View>
-      )}
-
-      {/* ── CTA ────────────────────────────────────────── */}
-      <View style={styles.ctaCard}>
-        <View style={styles.ctaOrb} />
-        <Feather
-          name="trending-up"
-          size={28}
-          color={WHITE}
-          style={{ marginBottom: 10 }}
-        />
-        <Text style={styles.ctaTitle}>Keep learning,{"\n"}keep growing!</Text>
-        <Text style={styles.ctaSub}>
-          Access {moduleCount}+ farming modules built for South Africa
-        </Text>
-        <Pressable
-          style={styles.ctaBtn}
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            if (user) router.push("/(tabs)/learn");
-            else router.push("/(auth)/login");
-          }}
-        >
-          <Feather name="book-open" size={16} color={PRIMARY} />
-          <Text style={styles.ctaBtnText}>Start Learning</Text>
-        </Pressable>
+        {listingsLoading ? (
+          <ActivityIndicator color={C.primary} style={{ paddingLeft: 20 }} />
+        ) : (
+          <View style={styles.listingsCol}>
+            {listings.slice(0, 3).map((item) => (
+              <Pressable
+                key={item.id}
+                style={({ pressed }) => [styles.listingCard, { opacity: pressed ? 0.95 : 1 }]}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  if (!user) {
+                    router.push("/(auth)/login");
+                    return;
+                  }
+                  router.push(`/product/${item.id}`);
+                }}
+              >
+                <View style={styles.listingIconBox}>
+                  <Feather name="package" size={22} color={C.primary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.listingTitle}>{item.title}</Text>
+                  <Text style={styles.listingFarmer}>
+                    {item.farmer_name} · {item.location}
+                  </Text>
+                </View>
+                <View style={{ alignItems: "flex-end" }}>
+                  <Text style={styles.listingPrice}>R{Number(item.price).toFixed(2)}</Text>
+                  <Text style={styles.listingUnit}>per {item.unit}</Text>
+                </View>
+              </Pressable>
+            ))}
+          </View>
+        )}
       </View>
 
       {/* ── Sign in nudge for guests ────────────────────── */}
@@ -388,14 +400,27 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  badge: {
+  notifBadge: {
     position: "absolute",
     top: -2,
     right: -2,
     backgroundColor: "#EF4444",
-    borderRadius: 9,
+    borderRadius: 10,
     minWidth: 18,
     height: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 4,
+    borderWidth: 1.5,
+    borderColor: C.background,
+  },
+  notifBadgeText: {
+    fontSize: 10,
+    fontFamily: "Inter_700Bold",
+    color: "#fff",
+  },
+  guestBanner: {
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 3,

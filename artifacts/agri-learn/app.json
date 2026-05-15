@@ -14,15 +14,24 @@
       "backgroundColor": "#ffffff"
     },
     "ios": { "supportsTablet": false },
-    "android": {},
+    "android": {
+      "package": "com.agrilearn.app",
+      "versionCode": 8,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/icon.png",
+        "backgroundColor": "#2D6A4F"
+      }
+    },
     "web": { "favicon": "./assets/images/icon.png" },
-    "plugins": [
-      "expo-font",
-      "expo-web-browser"
-    ],
+    "plugins": ["expo-font", "expo-web-browser"],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": false
+    },
+    "extra": {
+      "eas": {
+        "projectId": "e8abcf30-fd9c-4c6d-abb1-0f586075d04d"
+      }
     }
   }
 }

@@ -80,6 +80,75 @@ export function useAdminStats() {
   });
 }
 
+export function useFlaggedFarmers() {
+  return useQuery({
+    queryKey: ["admin", "flagged-farmers"],
+    queryFn: async () => {
+      const { data: badReviews } = await supabase
+        .from("reviews")
+        .select("reviewee_id, rating")
+        .lte("rating", 2);
+
+      if (!badReviews || badReviews.length === 0) return [];
+
+      const counts: Record<string, number> = {};
+      for (const r of badReviews) {
+        counts[r.reviewee_id] = (counts[r.reviewee_id] ?? 0) + 1;
+      }
+
+      const flaggedIds = Object.entries(counts)
+        .filter(([, count]) => count >= 3)
+        .map(([id]) => id);
+
+      if (flaggedIds.length === 0) return [];
+
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("*")
+        .in("id", flaggedIds);
+
+      return (profiles ?? []).map((p: any) => ({
+        ...p,
+        bad_review_count: counts[p.id] ?? 0,
+      }));
+    },
+    staleTime: 60_000,
+    retry: false,
+  });
+}
+
+export function useSuspendUser() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (userId: string) => {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ suspended: true })
+        .eq("id", userId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin"] });
+    },
+  });
+}
+
+export function useUnsuspendUser() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (userId: string) => {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ suspended: false })
+        .eq("id", userId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin"] });
+    },
+  });
+}
+
 export function useAllUsers() {
   return useQuery({
     queryKey: ["admin", "users"],

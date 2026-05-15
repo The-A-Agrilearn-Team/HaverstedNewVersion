@@ -2,10 +2,12 @@ import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { router, useLocalSearchParams } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
   Platform,
   Pressable,
   ScrollView,
@@ -17,31 +19,25 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Colors from "@/constants/colors";
 import { supabase, LearningModule } from "@/lib/supabase";
-import {
-  useMarkComplete,
-  useToggleBookmark,
-  useBookmarks,
-  useLessonProgress,
-  useMarkLessonComplete,
-} from "@/hooks/useProgress";
+import { useMarkComplete, useToggleBookmark, useBookmarks, useUpdateProgress } from "@/hooks/useProgress";
 import { useAuth } from "@/context/AuthContext";
 import { askModuleAssistant } from "@/lib/aiSearch";
-import { getModuleCourse, Lesson, LessonSection, QuizQuestion } from "@/constants/moduleContent";
 
 const C = Colors.light;
 
 const MOCK_MODULES: Record<string, LearningModule> = {
-  "1": { id: "1", title: "Growing Tomatoes: Complete Guide", description: "Step-by-step guide to planting, watering, nurturing, and harvesting tomatoes in South African conditions.", category: "Crops", level: "beginner", duration_minutes: 45, language: "en", created_at: new Date().toISOString(), content: "" },
-  "2": { id: "2", title: "Growing Spinach: Complete Guide", description: "How to plant, water, feed, and harvest spinach for a continuous supply throughout the year.", category: "Crops", level: "beginner", duration_minutes: 30, language: "en", created_at: new Date().toISOString(), content: "" },
-  "3": { id: "3", title: "Growing Potatoes: Complete Guide", description: "Step-by-step instructions for planting, hilling, watering, and harvesting potatoes in South Africa.", category: "Crops", level: "beginner", duration_minutes: 50, language: "en", created_at: new Date().toISOString(), content: "" },
-  "4": { id: "4", title: "Growing Carrots: Complete Guide", description: "Learn to plant, thin, water, and harvest carrots for crisp, sweet results.", category: "Crops", level: "beginner", duration_minutes: 40, language: "en", created_at: new Date().toISOString(), content: "" },
-  "5": { id: "5", title: "Growing Onions: Complete Guide", description: "Complete instructions for raising, transplanting, watering, and curing onions in South Africa.", category: "Crops", level: "intermediate", duration_minutes: 55, language: "en", created_at: new Date().toISOString(), content: "" },
-  "6": { id: "6", title: "Growing Butternut Squash: Complete Guide", description: "How to plant, train, water, and harvest butternut squash for excellent yield.", category: "Crops", level: "beginner", duration_minutes: 40, language: "en", created_at: new Date().toISOString(), content: "" },
-  "7": { id: "7", title: "Growing Mangoes: Complete Guide", description: "From young tree establishment to first harvest — a complete mango guide for SA farmers.", category: "Crops", level: "intermediate", duration_minutes: 60, language: "en", created_at: new Date().toISOString(), content: "" },
-  "8": { id: "8", title: "Growing Cabbage: Complete Guide", description: "Step-by-step guide to raising, transplanting, feeding, and harvesting quality cabbage heads.", category: "Crops", level: "beginner", duration_minutes: 42, language: "en", created_at: new Date().toISOString(), content: "" },
+  "1": { id: "1", title: "Intro to Crop Rotation", description: "Improve soil health through strategic crop rotation techniques.", category: "Crops", level: "beginner", duration_minutes: 15, language: "en", created_at: new Date().toISOString(), content: "Crop rotation is the practice of growing different types of crops in the same area across a sequence of growing seasons.\n\nBENEFITS\n• Reduces soil erosion\n• Increases soil fertility\n• Controls pests and diseases\n• Improves water retention\n\nBASIC 4-YEAR ROTATION\n1. Year 1: Legumes (nitrogen fixers)\n2. Year 2: Brassicas (heavy feeders)\n3. Year 3: Root vegetables\n4. Year 4: Fallow or cover crops\n\nGETTING STARTED\nStart by mapping your land into equal sections and assigning each section a different crop family. Keep detailed records of what grew where each year.\n\nLEGUME CROPS\nLegumes fix atmospheric nitrogen into the soil through symbiotic bacteria in their root nodules. This reduces the need for synthetic nitrogen fertilizers.\n\nExamples: Beans, peas, soybeans, cowpeas, groundnuts\n\nPRACTICAL TIPS\n• Start small — rotate just 2 or 3 crops before adding complexity\n• Keep a farm diary recording crop varieties, yields, and observations\n• Test soil before and after each cycle to track improvement\n• Join a local farming cooperative to share knowledge" },
+  "2": { id: "2", title: "Water Management Basics", description: "Efficient irrigation strategies for small-scale farms.", category: "Irrigation", level: "beginner", duration_minutes: 20, language: "en", created_at: new Date().toISOString(), content: "Efficient water use is critical for profitable, sustainable farming.\n\nDRIP IRRIGATION\nDelivers water directly to the plant root zone, reducing evaporation by up to 60%.\n\nRAINWATER HARVESTING\nCollect and store rainwater during rainy seasons. A 100m² roof can collect ~50,000 litres annually.\n\nSCHEDULING\nWater early morning (4–8 AM) or evening to minimize evaporation.\n\nSOIL MOISTURE MANAGEMENT\n• Sandy soils: Water frequently but in small amounts\n• Clay soils: Water less frequently but more deeply\n• Loamy soils: Ideal, moderate watering schedule\n\nWATER CONSERVATION TIPS\n• Mulch around plants to retain moisture\n• Use raised beds to improve drainage\n• Plant windbreaks to reduce evaporation" },
+  "3": { id: "3", title: "Soil Testing & pH", description: "Understanding soil composition and optimizing for better yields.", category: "Soil", level: "intermediate", duration_minutes: 25, language: "en", created_at: new Date().toISOString(), content: "Knowing your soil composition is the foundation of successful farming.\n\nWHAT TO TEST\n• pH level (ideal: 6.0–7.0 for most crops)\n• Nitrogen (N), Phosphorus (P), Potassium (K)\n• Organic matter content\n• Micronutrients: Iron, Zinc, Manganese\n\nHOW TO TEST\n1. Collect samples from 8–10 spots in your field\n2. Take samples from 15–20cm depth\n3. Mix samples and take a 500g subsample\n4. Use a home test kit or send to an accredited lab\n\nADJUSTING pH\n• Too acidic (below 6.0): Add agricultural lime\n• Too alkaline (above 7.5): Add sulfur or organic matter\n• Retest after 3 months\n\nNPK EXPLAINED\n• Nitrogen (N): Promotes leafy green growth\n• Phosphorus (P): Encourages root development\n• Potassium (K): Improves disease resistance" },
+  "4": { id: "4", title: "Pest Identification Guide", description: "Identify and manage common crop pests in South Africa.", category: "Pest Control", level: "beginner", duration_minutes: 18, language: "en", created_at: new Date().toISOString(), content: "Early identification is key to controlling pest damage.\n\nCOMMON PESTS\n• Aphids: Small, soft-bodied insects clustered on new growth\n• Whiteflies: Tiny white insects on leaf undersides\n• Cutworms: Larvae that cut seedlings at soil level at night\n• Bollworms: Bore into maize ears and cotton bolls\n• Red Spider Mite: Causes yellow stippling in hot, dry conditions\n\nINTEGRATED PEST MANAGEMENT (IPM)\n1. Monitor regularly — walk fields weekly\n2. Set action thresholds — not every pest needs treatment\n3. Use biological controls first\n4. Apply pesticides only as last resort\n\nBIOLOGICAL CONTROLS\n• Ladybirds eat 50–60 aphids per day\n• Ground beetles eat soil-dwelling pests\n• Parasitic wasps attack caterpillars\n• Bt spray targets caterpillars, safe for beneficial insects\n\nSAFE PESTICIDE USE\n• Read and follow label instructions\n• Wear gloves, goggles, and mask\n• Never spray on windy days\n• Respect pre-harvest intervals" },
+  "5": { id: "5", title: "Selling at Farmers Markets", description: "Price and present your produce for maximum sales.", category: "Business", level: "beginner", duration_minutes: 22, language: "en", created_at: new Date().toISOString(), content: "Farmers markets offer better margins than wholesale — but success requires preparation.\n\nPRICING STRATEGY\n• Research competitor prices at the same market\n• Calculate full cost: seeds, water, fertilizer, labor, transport, stall fee\n• Add 25–40% profit margin\n• Price in round numbers for easy change\n\nDISPLAY TIPS\n• Use height variation — raised items at back\n• Keep produce clean, sorted by size\n• Clear, large handwritten price signs\n• Include your farm name and story\n\nCUSTOMER SERVICE\n• Smile and greet every customer\n• Know your produce — storage, cooking tips\n• Offer samples when permitted\n• Build relationships with regulars\n\nRECORD KEEPING\n• Track what sells well each week\n• Record expenses and income for tax\n• Keep records 5 years (SARS requirement)" },
+  "6": { id: "6", title: "Livestock Health Basics", description: "Essential health management for small-scale livestock.", category: "Livestock", level: "beginner", duration_minutes: 30, language: "en", created_at: new Date().toISOString(), content: "Healthy livestock is the foundation of a profitable operation. Prevention is cheaper than treatment.\n\nDAILY CHECKS\n• Fresh, clean water always available\n• Observe for illness: lethargy, isolation, poor appetite\n• Monitor feed consumption\n• Check for injuries and wounds\n\nVACCINATION SCHEDULE\nWork with a local vet to establish a vaccination program:\n• Cattle: Brucellosis, Lumpy Skin Disease, Foot and Mouth\n• Goats/Sheep: Pasteurella, Pulpy Kidney, Anthrax\n• Poultry: Newcastle Disease (monthly for layers), Marek's Disease\n\nSIGNS OF ILLNESS\n• Dull, sunken eyes or discharge\n• Dry, cracked nose (cattle)\n• Rough or dull coat/feathers\n• Isolation from herd\n• Abnormal droppings\n• Labored breathing\n\nPREVENTIVE MEASURES\n• Quarantine new animals 2–3 weeks\n• Clean housing and remove manure regularly\n• Rotate grazing pastures to break parasite cycles\n• Deworm on veterinary schedule" },
 };
 
-interface ChatMessage { role: "user" | "assistant"; text: string; }
+interface ChatMessage {
+  role: "user" | "assistant";
+  text: string;
+}
 
 function useSingleModule(id: string) {
   return useQuery({
@@ -235,43 +231,51 @@ export default function ModuleDetailScreen() {
   const { data: bookmarkedIds = [] } = useBookmarks();
   const { data: lessonStore = {} } = useLessonProgress(id ?? "1");
   const toggleBookmark = useToggleBookmark();
-  const markModuleComplete = useMarkComplete();
-  const markLessonComplete = useMarkLessonComplete();
+  const markComplete = useMarkComplete();
+  const updateProgress = useUpdateProgress();
 
-  const course = getModuleCourse(id ?? "1");
-  const lessons = course?.lessons ?? [];
-  const [activeLessonIndex, setActiveLessonIndex] = useState(0);
-  const activeLesson: Lesson | undefined = lessons[activeLessonIndex];
+  const [completed, setCompleted] = useState(false);
+  const isBookmarked = mod ? bookmarkedIds.includes(mod.id) : false;
 
-  const [quizPassed, setQuizPassed] = useState<Record<string, boolean>>({});
   const [aiOpen, setAiOpen] = useState(false);
   const [aiQuestion, setAiQuestion] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
   const chatScrollRef = useRef<ScrollView>(null);
-  const contentScrollRef = useRef<ScrollView>(null);
-  const lessonTabsRef = useRef<ScrollView>(null);
-
-  const isBookmarked = mod ? bookmarkedIds.includes(mod.id) : false;
-
-  const isLessonCompleted = (lessonId: string) => {
-    return lessonStore[`${id}:${lessonId}`]?.completed ?? false;
-  };
-
-  const completedCount = lessons.filter((l) => isLessonCompleted(l.id)).length;
-  const overallPct = lessons.length > 0 ? Math.round((completedCount / lessons.length) * 100) : 0;
-  const allDone = completedCount === lessons.length && lessons.length > 0;
+  const lastSavedPct = useRef(-1);
+  const scrollThrottleRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    const firstIncomplete = lessons.findIndex((l) => !isLessonCompleted(l.id));
-    if (firstIncomplete >= 0) setActiveLessonIndex(firstIncomplete);
-  }, [lessonStore]);
+    if (canAccess && mod?.id) {
+      updateProgress.mutate({ moduleId: mod.id, progressPct: 10 });
+      lastSavedPct.current = 10;
+    }
+  }, [canAccess, mod?.id]);
 
-  const handleCompleteLesson = () => {
-    if (!activeLesson || !user) return;
-    const lessonId = activeLesson.id;
-    const hasQuiz = (activeLesson.quiz?.length ?? 0) > 0;
-    if (hasQuiz && !quizPassed[lessonId]) return;
+  const handleScroll = useCallback(
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      if (!canAccess || !mod?.id || markComplete.isSuccess || completed) return;
+      const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
+      const scrollable = contentSize.height - layoutMeasurement.height;
+      if (scrollable <= 0) return;
+      const rawPct = Math.round((contentOffset.y / scrollable) * 90) + 10;
+      const pct = Math.min(rawPct, 90);
+      if (pct <= lastSavedPct.current) return;
+      lastSavedPct.current = pct;
+      if (scrollThrottleRef.current) clearTimeout(scrollThrottleRef.current);
+      scrollThrottleRef.current = setTimeout(() => {
+        updateProgress.mutate({ moduleId: mod.id, progressPct: pct });
+      }, 1500);
+    },
+    [canAccess, mod?.id, markComplete.isSuccess, completed]
+  );
+
+  const handleMarkComplete = async () => {
+    if (!user) {
+      router.push("/(auth)/login");
+      return;
+    }
+    setCompleted(true);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     markLessonComplete.mutate({ moduleId: id ?? "1", lessonId, totalLessons: lessons.length });
     if (completedCount + 1 >= lessons.length && mod) {
@@ -304,18 +308,45 @@ export default function ModuleDetailScreen() {
     setTimeout(() => chatScrollRef.current?.scrollToEnd({ animated: true }), 100);
   };
 
+  const handleAskAI = async () => {
+    if (!aiQuestion.trim() || !mod) return;
+    const question = aiQuestion.trim();
+    setAiQuestion("");
+    setAiLoading(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    setChatHistory((prev) => [...prev, { role: "user", text: question }]);
+    setTimeout(() => chatScrollRef.current?.scrollToEnd({ animated: true }), 100);
+
+    const answer = await askModuleAssistant(question, mod.title, mod.content ?? "");
+    setChatHistory((prev) => [...prev, { role: "assistant", text: answer }]);
+    setAiLoading(false);
+    setTimeout(() => chatScrollRef.current?.scrollToEnd({ animated: true }), 100);
+  };
+
   if (!user) {
     return (
-      <View style={styles.gatePage}>
-        <View style={styles.gateIcon}><Feather name="book-open" size={32} color="#2D6A4F" /></View>
-        <Text style={styles.gateTitle}>Farmers Only</Text>
-        <Text style={styles.gateBody}>You need to be registered as a farmer to view learning content.</Text>
-        <Pressable style={styles.gatePrimaryBtn} onPress={() => router.push("/(auth)/register")}>
+      <View style={{ flex: 1, backgroundColor: C.background, alignItems: "center", justifyContent: "center", padding: 32 }}>
+        <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: "#D1FAE5", alignItems: "center", justifyContent: "center", marginBottom: 20 }}>
+          <Feather name="book-open" size={32} color="#2D6A4F" />
+        </View>
+        <Text style={{ fontSize: 20, fontFamily: "Inter_700Bold", color: C.text, marginBottom: 10, textAlign: "center" }}>Farmers Only</Text>
+        <Text style={{ fontSize: 14, fontFamily: "Inter_400Regular", color: C.textSecondary, textAlign: "center", lineHeight: 22, marginBottom: 28 }}>
+          You need to be registered as a farmer to view learning content.
+        </Text>
+        <Pressable
+          style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1, backgroundColor: "#2D6A4F", borderRadius: 12, paddingHorizontal: 24, paddingVertical: 13, flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12 })}
+          onPress={() => router.push("/(auth)/register")}
+        >
           <Feather name="user-plus" size={16} color="#fff" />
-          <Text style={styles.gatePrimaryBtnText}>Register as a Farmer</Text>
+          <Text style={{ fontSize: 15, fontFamily: "Inter_600SemiBold", color: "#fff" }}>Register as a Farmer</Text>
         </Pressable>
-        <Pressable style={styles.gateSecondaryBtn} onPress={() => router.push("/(auth)/login")}>
-          <Text style={styles.gateSecondaryBtnText}>Already have an account? Sign In</Text>
+        <Pressable
+          style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1, borderRadius: 12, paddingHorizontal: 24, paddingVertical: 13, flexDirection: "row", alignItems: "center", gap: 8 })}
+          onPress={() => router.push("/(auth)/login")}
+        >
+          <Feather name="log-in" size={16} color="#2D6A4F" />
+          <Text style={{ fontSize: 15, fontFamily: "Inter_600SemiBold", color: "#2D6A4F" }}>Already have an account? Sign In</Text>
         </Pressable>
       </View>
     );
@@ -323,11 +354,18 @@ export default function ModuleDetailScreen() {
 
   if (!canAccess) {
     return (
-      <View style={styles.gatePage}>
-        <View style={styles.gateIcon}><Feather name="lock" size={32} color="#2D6A4F" /></View>
-        <Text style={styles.gateTitle}>Access Restricted</Text>
-        <Text style={styles.gateBody}>Learning modules are only available to farmers and admins.</Text>
-        <Pressable style={styles.gatePrimaryBtn} onPress={() => router.back()}>
+      <View style={{ flex: 1, backgroundColor: C.background, alignItems: "center", justifyContent: "center", padding: 32 }}>
+        <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: "#D1FAE5", alignItems: "center", justifyContent: "center", marginBottom: 20 }}>
+          <Feather name="lock" size={32} color="#2D6A4F" />
+        </View>
+        <Text style={{ fontSize: 20, fontFamily: "Inter_700Bold", color: C.text, marginBottom: 8, textAlign: "center" }}>Access Restricted</Text>
+        <Text style={{ fontSize: 14, fontFamily: "Inter_400Regular", color: C.textSecondary, textAlign: "center", lineHeight: 22, marginBottom: 28 }}>
+          Learning modules are only available to farmers and admins. Your account type ({role}) does not have access.
+        </Text>
+        <Pressable
+          style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1, backgroundColor: "#2D6A4F", borderRadius: 12, paddingHorizontal: 24, paddingVertical: 13, flexDirection: "row", alignItems: "center", gap: 8 })}
+          onPress={() => router.back()}
+        >
           <Feather name="arrow-left" size={16} color="#fff" />
           <Text style={styles.gatePrimaryBtnText}>Go Back</Text>
         </Pressable>
@@ -346,94 +384,76 @@ export default function ModuleDetailScreen() {
   const canComplete = lessonAlreadyComplete || (!hasQuiz || quizPassed[activeLesson?.id ?? ""]);
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: C.background }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
-      <View style={{ flex: 1 }}>
+    <KeyboardAvoidingView
+      style={{ flex: 1, backgroundColor: C.background }}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={0}
+    >
+      <View style={{ flex: 1, backgroundColor: C.background }}>
         <View style={[styles.navBar, { paddingTop: insets.top + 8 }]}>
-          <Pressable style={({ pressed }) => [styles.navBtn, { opacity: pressed ? 0.6 : 1 }]} onPress={() => router.back()}>
+          <Pressable
+            style={({ pressed }) => [styles.navBtn, { opacity: pressed ? 0.6 : 1 }]}
+            onPress={() => router.back()}
+          >
             <Feather name="arrow-left" size={22} color={C.text} />
           </Pressable>
-          <View style={styles.navCenter}>
-            <Text style={styles.navCatText}>{mod.category}</Text>
-            <View style={[styles.levelPill, { backgroundColor: levelBg }]}>
-              <Text style={[styles.levelText, { color: levelColor }]}>{mod.level}</Text>
-            </View>
-          </View>
-          <View style={{ flexDirection: "row", gap: 8 }}>
-            <Pressable style={({ pressed }) => [styles.navBtn, aiOpen && { backgroundColor: `${C.primary}18` }, { opacity: pressed ? 0.6 : 1 }]} onPress={() => { Haptics.selectionAsync(); setAiOpen((v) => !v); }}>
+          <View style={{ flexDirection: "row", gap: 10 }}>
+            <Pressable
+              style={({ pressed }) => [
+                styles.navBtn,
+                { opacity: pressed ? 0.6 : 1, backgroundColor: aiOpen ? `${C.primary}18` : C.surfaceSecondary },
+              ]}
+              onPress={() => {
+                Haptics.selectionAsync();
+                setAiOpen((v) => !v);
+              }}
+            >
               <Feather name="message-circle" size={20} color={aiOpen ? C.primary : C.text} />
             </Pressable>
-            <Pressable style={({ pressed }) => [styles.navBtn, isBookmarked && { backgroundColor: `${C.primary}18` }, { opacity: pressed ? 0.6 : 1 }]} onPress={() => { if (!mod) return; Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); toggleBookmark.mutate({ moduleId: mod.id, isBookmarked }); }}>
+            <Pressable
+              style={({ pressed }) => [
+                styles.navBtn,
+                isBookmarked && { backgroundColor: `${C.primary}18` },
+                { opacity: pressed ? 0.6 : 1 },
+              ]}
+              onPress={handleBookmark}
+            >
               <Feather name="bookmark" size={22} color={isBookmarked ? C.primary : C.text} />
             </Pressable>
           </View>
         </View>
 
-        <View style={styles.moduleHeader}>
-          <Text style={styles.moduleTitle} numberOfLines={2}>{mod.title}</Text>
-          <View style={styles.progressRow}>
-            <View style={styles.progressTrackWide}>
-              <View style={[styles.progressFillWide, { width: `${overallPct}%` as any }]} />
-            </View>
-            <Text style={styles.progressLabel}>{overallPct}% complete</Text>
-          </View>
-          {allDone && (
-            <View style={styles.completedBanner}>
-              <Feather name="award" size={14} color="#059669" />
-              <Text style={styles.completedBannerText}>Module Complete!</Text>
-            </View>
-          )}
-        </View>
-
-        {lessons.length > 0 && (
-          <ScrollView
-            ref={lessonTabsRef}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.lessonTabsRow}
-            style={styles.lessonTabsScroll}
-          >
-            {lessons.map((lesson, idx) => {
-              const done = isLessonCompleted(lesson.id);
-              const active = idx === activeLessonIndex;
-              return (
-                <Pressable
-                  key={lesson.id}
-                  style={[
-                    styles.lessonTab,
-                    active && styles.lessonTabActive,
-                    done && !active && styles.lessonTabDone,
-                  ]}
-                  onPress={() => {
-                    setActiveLessonIndex(idx);
-                    Haptics.selectionAsync();
-                    contentScrollRef.current?.scrollTo({ y: 0, animated: false });
-                  }}
-                >
-                  {done ? (
-                    <Feather name="check-circle" size={14} color={active ? "#fff" : "#059669"} />
-                  ) : (
-                    <View style={[styles.lessonNum, active && styles.lessonNumActive]}>
-                      <Text style={[styles.lessonNumText, active && { color: "#fff" }]}>{idx + 1}</Text>
-                    </View>
-                  )}
-                  <Text style={[styles.lessonTabText, active && styles.lessonTabTextActive, done && !active && styles.lessonTabTextDone]} numberOfLines={2}>
-                    {lesson.title}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-        )}
-
         <ScrollView
-          ref={contentScrollRef}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: insets.bottom + 120 }}
+          onScroll={handleScroll}
+          scrollEventThrottle={200}
         >
+          <View style={styles.heroSection}>
+            <View style={styles.heroIcon}>
+              <Feather name="book-open" size={36} color={C.primary} />
+            </View>
+            <View style={styles.metaRow}>
+              <View style={[styles.levelPill, { backgroundColor: levelBg }]}>
+                <Text style={[styles.levelText, { color: levelColor }]}>{mod.level}</Text>
+              </View>
+              <View style={styles.metaChip}>
+                <Feather name="clock" size={12} color={C.textSecondary} />
+                <Text style={styles.metaChipText}>{mod.duration_minutes} min read</Text>
+              </View>
+              <View style={styles.metaChip}>
+                <Feather name="tag" size={12} color={C.textSecondary} />
+                <Text style={styles.metaChipText}>{mod.category}</Text>
+              </View>
+            </View>
+            <Text style={styles.heroTitle}>{mod.title}</Text>
+            <Text style={styles.heroDesc}>{mod.description}</Text>
+          </View>
+
           {aiOpen && (
             <View style={styles.aiPanel}>
               <View style={styles.aiPanelHeader}>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                <View style={styles.aiPanelHeaderLeft}>
                   <Feather name="message-circle" size={16} color={C.primary} />
                   <Text style={styles.aiPanelTitle}>AI Learning Assistant</Text>
                 </View>
@@ -441,249 +461,293 @@ export default function ModuleDetailScreen() {
                   <Feather name="x" size={18} color={C.textSecondary} />
                 </Pressable>
               </View>
+
               {chatHistory.length === 0 ? (
                 <View style={styles.aiEmptyState}>
-                  <Text style={styles.aiEmptyText}>Ask anything about this lesson — I'll give you a practical answer.</Text>
-                  <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 10 }}>
-                    {["How do I get started?", "Give a practical example", "What's the most important tip?"].map((hint) => (
-                      <Pressable key={hint} style={styles.aiChip} onPress={() => setAiQuestion(hint)}>
-                        <Text style={styles.aiChipText}>{hint}</Text>
+                  <Text style={styles.aiEmptyText}>
+                    Stuck on something? Ask the AI assistant a question about this module and it will help you understand.
+                  </Text>
+                  <View style={styles.aiSuggestions}>
+                    {[
+                      "How do I get started?",
+                      "Give me a practical example",
+                      "What is the most important tip?",
+                    ].map((hint) => (
+                      <Pressable
+                        key={hint}
+                        style={styles.aiSuggestionChip}
+                        onPress={() => setAiQuestion(hint)}
+                      >
+                        <Text style={styles.aiSuggestionText}>{hint}</Text>
                       </Pressable>
                     ))}
                   </View>
                 </View>
               ) : (
-                <ScrollView ref={chatScrollRef} style={styles.chatScroll} showsVerticalScrollIndicator={false}>
+                <ScrollView
+                  ref={chatScrollRef}
+                  style={styles.chatScroll}
+                  showsVerticalScrollIndicator={false}
+                  onContentSizeChange={() => chatScrollRef.current?.scrollToEnd({ animated: true })}
+                >
                   {chatHistory.map((msg, i) => (
-                    <View key={i} style={[styles.chatBubble, msg.role === "user" ? styles.chatBubbleUser : styles.chatBubbleAI]}>
-                      {msg.role === "assistant" && <View style={styles.aiBubbleIcon}><Feather name="cpu" size={12} color={C.primary} /></View>}
-                      <Text style={[styles.chatBubbleText, msg.role === "user" ? styles.chatBubbleTextUser : styles.chatBubbleTextAI]}>{msg.text}</Text>
+                    <View
+                      key={i}
+                      style={[
+                        styles.chatBubble,
+                        msg.role === "user" ? styles.chatBubbleUser : styles.chatBubbleAI,
+                      ]}
+                    >
+                      {msg.role === "assistant" && (
+                        <View style={styles.aiBubbleIcon}>
+                          <Feather name="cpu" size={12} color={C.primary} />
+                        </View>
+                      )}
+                      <Text
+                        style={[
+                          styles.chatBubbleText,
+                          msg.role === "user" ? styles.chatBubbleTextUser : styles.chatBubbleTextAI,
+                        ]}
+                      >
+                        {msg.text}
+                      </Text>
                     </View>
                   ))}
-                  {aiLoading && <View style={[styles.chatBubble, styles.chatBubbleAI]}><ActivityIndicator size="small" color={C.primary} /></View>}
+                  {aiLoading && (
+                    <View style={[styles.chatBubble, styles.chatBubbleAI]}>
+                      <ActivityIndicator size="small" color={C.primary} />
+                    </View>
+                  )}
                 </ScrollView>
               )}
+
               <View style={styles.aiInputRow}>
                 <TextInput
                   style={styles.aiInput}
-                  placeholder="Ask about this lesson…"
+                  placeholder="Ask something about this module…"
                   placeholderTextColor={C.textTertiary}
                   value={aiQuestion}
                   onChangeText={setAiQuestion}
                   onSubmitEditing={handleAskAI}
                   returnKeyType="send"
+                  multiline={false}
                   editable={!aiLoading}
                 />
-                <Pressable style={[styles.aiSendBtn, (!aiQuestion.trim() || aiLoading) && styles.aiSendBtnDisabled]} onPress={handleAskAI} disabled={!aiQuestion.trim() || aiLoading}>
+                <Pressable
+                  style={[styles.aiSendBtn, (!aiQuestion.trim() || aiLoading) && styles.aiSendBtnDisabled]}
+                  onPress={handleAskAI}
+                  disabled={!aiQuestion.trim() || aiLoading}
+                >
                   <Feather name="send" size={16} color="#fff" />
                 </Pressable>
               </View>
             </View>
           )}
 
-          {activeLesson ? (
-            <View>
-              <View style={styles.lessonInfoBox}>
-                <Text style={styles.lessonInfoTitle}>{activeLesson.title}</Text>
-                <Text style={styles.lessonInfoDesc}>{activeLesson.description}</Text>
-                <View style={styles.lessonDurationRow}>
-                  <Feather name="clock" size={13} color={C.textSecondary} />
-                  <Text style={styles.lessonDurationText}>{Math.ceil(activeLesson.duration_seconds / 60)} min read</Text>
-                  {lessonAlreadyComplete && (
-                    <View style={styles.donePill}>
-                      <Feather name="check" size={11} color="#059669" />
-                      <Text style={styles.donePillText}>Completed</Text>
-                    </View>
-                  )}
+          <View style={styles.contentCard}>
+            {(mod.content || "").split("\n\n").map((block, i) => {
+              const trimmed = block.trim();
+              if (!trimmed) return null;
+              const isHeading = trimmed === trimmed.toUpperCase() && trimmed.length < 60 && !trimmed.startsWith("•") && !trimmed.match(/^\d/);
+              if (isHeading) {
+                return <Text key={i} style={styles.contentHeading}>{trimmed}</Text>;
+              }
+              const lines = trimmed.split("\n");
+              return (
+                <View key={i} style={styles.contentBlock}>
+                  {lines.map((line, j) => {
+                    if (line.startsWith("•")) {
+                      return (
+                        <View key={j} style={styles.bulletRow}>
+                          <View style={styles.bulletDot} />
+                          <Text style={styles.bulletText}>{line.slice(2)}</Text>
+                        </View>
+                      );
+                    }
+                    if (line.match(/^\d+\./)) {
+                      return (
+                        <View key={j} style={styles.bulletRow}>
+                          <Text style={styles.bulletNum}>{line.match(/^\d+/)?.[0]}.</Text>
+                          <Text style={styles.bulletText}>{line.replace(/^\d+\.\s*/, "")}</Text>
+                        </View>
+                      );
+                    }
+                    return <Text key={j} style={styles.contentText}>{line}</Text>;
+                  })}
                 </View>
-              </View>
+              );
+            })}
+          </View>
 
-              <View style={styles.contentArea}>
-                {activeLesson.sections.map((section, i) => (
-                  <ContentBlock key={i} section={section} />
-                ))}
-              </View>
-
-              {activeLesson.quiz && activeLesson.quiz.length > 0 && !lessonAlreadyComplete && (
-                <View style={{ paddingHorizontal: 16, paddingTop: 4 }}>
-                  <QuizSection
-                    questions={activeLesson.quiz}
-                    onAllCorrect={() => {
-                      setQuizPassed((prev) => ({ ...prev, [activeLesson.id]: true }));
-                    }}
-                  />
-                </View>
-              )}
-
-              {lessonAlreadyComplete && (
-                <View style={styles.alreadyDoneBox}>
-                  <Feather name="check-circle" size={20} color="#059669" />
-                  <Text style={styles.alreadyDoneText}>You've completed this lesson</Text>
-                </View>
-              )}
-
-              {!aiOpen && (
-                <Pressable style={styles.aiPromptBanner} onPress={() => { Haptics.selectionAsync(); setAiOpen(true); }}>
-                  <Feather name="message-circle" size={16} color={C.primary} />
-                  <Text style={styles.aiPromptText}>Have a question? Ask the AI assistant</Text>
-                  <Feather name="chevron-right" size={15} color={C.primary} />
-                </Pressable>
-              )}
-            </View>
-          ) : (
-            <View style={{ alignItems: "center", paddingTop: 60, gap: 12 }}>
-              <Feather name="book-open" size={40} color={C.textTertiary} />
-              <Text style={{ fontSize: 16, fontFamily: "Inter_500Medium", color: C.textSecondary }}>No lessons available yet</Text>
-            </View>
+          {!aiOpen && (
+            <Pressable
+              style={styles.aiPromptBanner}
+              onPress={() => {
+                Haptics.selectionAsync();
+                setAiOpen(true);
+              }}
+            >
+              <Feather name="message-circle" size={18} color={C.primary} />
+              <Text style={styles.aiPromptText}>Have a question about this module? Ask the AI assistant</Text>
+              <Feather name="chevron-right" size={16} color={C.primary} />
+            </Pressable>
           )}
         </ScrollView>
 
-        {activeLesson && !lessonAlreadyComplete && (
-          <View style={[styles.footer, { paddingBottom: insets.bottom + 12 }]}>
-            {hasQuiz && !quizPassed[activeLesson.id] ? (
-              <View style={styles.footerHint}>
-                <Feather name="lock" size={14} color={C.textSecondary} />
-                <Text style={styles.footerHintText}>Complete the knowledge check above to unlock this lesson</Text>
-              </View>
-            ) : (
-              <Pressable
-                style={[styles.completeBtn, !canComplete && styles.completeBtnDisabled]}
-                onPress={handleCompleteLesson}
-                disabled={!canComplete}
-              >
-                <Feather name="check-circle" size={18} color="#fff" />
-                <Text style={styles.completeBtnText}>
-                  {activeLessonIndex + 1 < lessons.length ? "Complete Lesson & Continue" : "Complete Final Lesson"}
-                </Text>
-              </Pressable>
-            )}
-          </View>
-        )}
-
-        {allDone && (
-          <View style={[styles.footer, { paddingBottom: insets.bottom + 12 }]}>
-            <View style={styles.moduleCompleteBadge}>
-              <Feather name="award" size={18} color="#059669" />
-              <Text style={styles.moduleCompleteBadgeText}>Module Complete! Well done</Text>
+        <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
+          {completed || markComplete.isSuccess ? (
+            <View style={styles.completedBadge}>
+              <Feather name="check-circle" size={20} color={C.success} />
+              <Text style={styles.completedText}>Module Completed!</Text>
             </View>
-          </View>
-        )}
+          ) : (
+            <Pressable
+              style={({ pressed }) => [styles.completeBtn, { opacity: pressed || markComplete.isPending ? 0.85 : 1 }]}
+              onPress={handleMarkComplete}
+              disabled={markComplete.isPending}
+            >
+              <Feather name="check" size={20} color="#fff" />
+              <Text style={styles.completeBtnText}>
+                {markComplete.isPending ? "Saving..." : "Mark as Complete"}
+              </Text>
+            </Pressable>
+          )}
+        </View>
       </View>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  gatePage: { flex: 1, backgroundColor: C.background, alignItems: "center", justifyContent: "center", padding: 32 },
-  gateIcon: { width: 72, height: 72, borderRadius: 36, backgroundColor: "#D1FAE5", alignItems: "center", justifyContent: "center", marginBottom: 20 },
-  gateTitle: { fontSize: 20, fontFamily: "Inter_700Bold", color: C.text, marginBottom: 10, textAlign: "center" },
-  gateBody: { fontSize: 14, fontFamily: "Inter_400Regular", color: C.textSecondary, textAlign: "center", lineHeight: 22, marginBottom: 28 },
-  gatePrimaryBtn: { backgroundColor: "#2D6A4F", borderRadius: 12, paddingHorizontal: 24, paddingVertical: 13, flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12 },
-  gatePrimaryBtnText: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: "#fff" },
-  gateSecondaryBtn: { paddingVertical: 8 },
-  gateSecondaryBtnText: { fontSize: 14, fontFamily: "Inter_500Medium", color: C.primary },
+  navBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    backgroundColor: C.background,
+  },
+  navBtn: {
+    width: 40, height: 40, borderRadius: 20, backgroundColor: C.surfaceSecondary, alignItems: "center", justifyContent: "center",
+  },
+  heroSection: { paddingHorizontal: 20, paddingBottom: 24, gap: 12 },
+  heroIcon: {
+    width: 64, height: 64, borderRadius: 18, backgroundColor: `${C.primary}14`, alignItems: "center", justifyContent: "center",
+  },
+  metaRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, alignItems: "center" },
+  levelPill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
+  levelText: { fontSize: 12, fontFamily: "Inter_600SemiBold" },
+  metaChip: { flexDirection: "row", alignItems: "center", gap: 5 },
+  metaChipText: { fontSize: 13, fontFamily: "Inter_400Regular", color: C.textSecondary },
+  heroTitle: { fontSize: 24, fontFamily: "Inter_700Bold", color: C.text, lineHeight: 32 },
+  heroDesc: { fontSize: 15, fontFamily: "Inter_400Regular", color: C.textSecondary, lineHeight: 22 },
 
-  navBar: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingBottom: 10, backgroundColor: C.background, borderBottomWidth: 1, borderBottomColor: C.border, justifyContent: "space-between" },
-  navBtn: { width: 38, height: 38, borderRadius: 10, backgroundColor: C.surfaceSecondary, alignItems: "center", justifyContent: "center" },
-  navCenter: { flexDirection: "row", alignItems: "center", gap: 8, flex: 1, justifyContent: "center" },
-  navCatText: { fontSize: 13, fontFamily: "Inter_500Medium", color: C.textSecondary },
-  levelPill: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
-  levelText: { fontSize: 11, fontFamily: "Inter_600SemiBold" },
-
-  moduleHeader: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 10, backgroundColor: C.background },
-  moduleTitle: { fontSize: 18, fontFamily: "Inter_700Bold", color: C.text, marginBottom: 10 },
-  progressRow: { flexDirection: "row", alignItems: "center", gap: 10 },
-  progressTrackWide: { flex: 1, height: 6, backgroundColor: C.border, borderRadius: 3, overflow: "hidden" },
-  progressFillWide: { height: 6, backgroundColor: C.primary, borderRadius: 3 },
-  progressLabel: { fontSize: 12, fontFamily: "Inter_600SemiBold", color: C.primary, minWidth: 80, textAlign: "right" },
-  completedBanner: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 8, backgroundColor: "#ECFDF5", borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, alignSelf: "flex-start" },
-  completedBannerText: { fontSize: 12, fontFamily: "Inter_600SemiBold", color: "#059669" },
-
-  lessonTabsScroll: { borderBottomWidth: 1, borderBottomColor: C.border, backgroundColor: C.background, maxHeight: 72 },
-  lessonTabsRow: { paddingHorizontal: 12, paddingVertical: 8, gap: 8, alignItems: "center" },
-  lessonTab: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, backgroundColor: C.surface, borderWidth: 1.5, borderColor: C.border, maxWidth: 160 },
-  lessonTabActive: { backgroundColor: C.primary, borderColor: C.primary },
-  lessonTabDone: { borderColor: "#059669", backgroundColor: "#ECFDF5" },
-  lessonNum: { width: 20, height: 20, borderRadius: 10, borderWidth: 1.5, borderColor: C.textTertiary, alignItems: "center", justifyContent: "center" },
-  lessonNumActive: { borderColor: "#fff" },
-  lessonNumText: { fontSize: 11, fontFamily: "Inter_700Bold", color: C.textSecondary },
-  lessonTabText: { fontSize: 12, fontFamily: "Inter_500Medium", color: C.textSecondary, flexShrink: 1 },
-  lessonTabTextActive: { color: "#fff" },
-  lessonTabTextDone: { color: "#059669" },
-
-  lessonInfoBox: { paddingHorizontal: 16, paddingTop: 14, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: C.border },
-  lessonInfoTitle: { fontSize: 17, fontFamily: "Inter_700Bold", color: C.text, marginBottom: 4 },
-  lessonInfoDesc: { fontSize: 13, fontFamily: "Inter_400Regular", color: C.textSecondary, lineHeight: 20, marginBottom: 8 },
-  lessonDurationRow: { flexDirection: "row", alignItems: "center", gap: 6 },
-  lessonDurationText: { fontSize: 12, fontFamily: "Inter_400Regular", color: C.textSecondary },
-  donePill: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#ECFDF5", borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2 },
-  donePillText: { fontSize: 11, fontFamily: "Inter_600SemiBold", color: "#059669" },
-
-  contentArea: { paddingHorizontal: 16, paddingTop: 16, gap: 6 },
-  sectionHeading: { fontSize: 15, fontFamily: "Inter_700Bold", color: C.text, marginTop: 16, marginBottom: 4 },
-  sectionParagraph: { fontSize: 14, fontFamily: "Inter_400Regular", color: C.text, lineHeight: 22 },
-  calloutBox: { flexDirection: "row", gap: 10, borderLeftWidth: 3, borderRadius: 8, padding: 12, alignItems: "flex-start" },
-  calloutText: { fontSize: 13, fontFamily: "Inter_400Regular", lineHeight: 20, flex: 1 },
-  listContainer: { gap: 8, marginTop: 4 },
-  stepRow: { flexDirection: "row", gap: 10, alignItems: "flex-start" },
-  stepNum: { width: 22, height: 22, borderRadius: 11, backgroundColor: C.primary, alignItems: "center", justifyContent: "center", marginTop: 1, flexShrink: 0 },
-  stepNumText: { fontSize: 11, fontFamily: "Inter_700Bold", color: "#fff" },
-  bulletRow: { flexDirection: "row", gap: 10, alignItems: "flex-start" },
-  bulletDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: C.primary, marginTop: 8, flexShrink: 0 },
-  listItemText: { fontSize: 14, fontFamily: "Inter_400Regular", color: C.text, lineHeight: 22, flex: 1 },
-
-  quizContainer: { backgroundColor: C.surface, borderRadius: 16, borderWidth: 1, borderColor: C.border, padding: 16, gap: 16 },
-  quizHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
-  quizTitle: { fontSize: 15, fontFamily: "Inter_700Bold", color: C.text, flex: 1 },
-  quizSubtitle: { fontSize: 12, fontFamily: "Inter_400Regular", color: C.textSecondary },
-  questionBlock: { gap: 8 },
-  questionText: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: C.text, lineHeight: 20 },
-  optionRow: { flexDirection: "row", alignItems: "center", gap: 10, borderWidth: 1.5, borderRadius: 10, padding: 12 },
-  radioOuter: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, alignItems: "center", justifyContent: "center", flexShrink: 0 },
-  radioInner: { width: 10, height: 10, borderRadius: 5 },
-  optionText: { fontSize: 13, fontFamily: "Inter_400Regular", lineHeight: 18 },
-  explanationBox: { flexDirection: "row", gap: 8, alignItems: "flex-start", backgroundColor: C.surfaceSecondary, borderRadius: 8, padding: 10 },
-  explanationText: { fontSize: 12, fontFamily: "Inter_400Regular", color: C.textSecondary, lineHeight: 18, flex: 1 },
-  resultBanner: { flexDirection: "row", gap: 10, alignItems: "center", borderWidth: 1, borderRadius: 10, padding: 12 },
-  resultText: { fontSize: 13, fontFamily: "Inter_600SemiBold", flex: 1 },
-  submitBtn: { backgroundColor: C.primary, borderRadius: 12, paddingVertical: 14, alignItems: "center" },
-  submitBtnDisabled: { backgroundColor: C.border },
-  submitBtnText: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: "#fff" },
-  retryBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderWidth: 1.5, borderColor: C.primary, borderRadius: 12, paddingVertical: 12 },
-  retryBtnText: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: C.primary },
-
-  alreadyDoneBox: { flexDirection: "row", alignItems: "center", gap: 10, margin: 16, backgroundColor: "#ECFDF5", borderRadius: 12, padding: 14 },
-  alreadyDoneText: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: "#059669" },
-
-  aiPanel: { margin: 16, backgroundColor: C.surface, borderRadius: 16, borderWidth: 1, borderColor: C.border, overflow: "hidden" },
-  aiPanelHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 14, borderBottomWidth: 1, borderBottomColor: C.border },
-  aiPanelTitle: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: C.text },
-  aiEmptyState: { padding: 14 },
+  aiPanel: {
+    marginHorizontal: 20,
+    marginBottom: 16,
+    backgroundColor: `${C.primary}06`,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: `${C.primary}25`,
+    overflow: "hidden",
+  },
+  aiPanelHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: `${C.primary}15`,
+  },
+  aiPanelHeaderLeft: { flexDirection: "row", alignItems: "center", gap: 8 },
+  aiPanelTitle: { fontSize: 13, fontFamily: "Inter_700Bold", color: C.primary },
+  aiEmptyState: { padding: 14, gap: 12 },
   aiEmptyText: { fontSize: 13, fontFamily: "Inter_400Regular", color: C.textSecondary, lineHeight: 20 },
-  aiChip: { paddingHorizontal: 12, paddingVertical: 7, backgroundColor: `${C.primary}12`, borderRadius: 8 },
-  aiChipText: { fontSize: 12, fontFamily: "Inter_500Medium", color: C.primary },
-  chatScroll: { maxHeight: 240, padding: 14 },
-  chatBubble: { marginBottom: 10, maxWidth: "85%" },
-  chatBubbleUser: { alignSelf: "flex-end", backgroundColor: C.primary, borderRadius: 14, padding: 10 },
-  chatBubbleAI: { alignSelf: "flex-start", flexDirection: "row", gap: 8, alignItems: "flex-start" },
-  aiBubbleIcon: { width: 24, height: 24, borderRadius: 12, backgroundColor: `${C.primary}15`, alignItems: "center", justifyContent: "center", marginTop: 2 },
-  chatBubbleText: { fontSize: 13, fontFamily: "Inter_400Regular", lineHeight: 19 },
-  chatBubbleTextUser: { color: "#fff" },
-  chatBubbleTextAI: { color: C.text, flex: 1 },
-  aiInputRow: { flexDirection: "row", gap: 10, padding: 12, borderTopWidth: 1, borderTopColor: C.border },
-  aiInput: { flex: 1, fontSize: 14, fontFamily: "Inter_400Regular", color: C.text, backgroundColor: C.surfaceSecondary, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10 },
-  aiSendBtn: { width: 40, height: 40, borderRadius: 10, backgroundColor: C.primary, alignItems: "center", justifyContent: "center" },
-  aiSendBtnDisabled: { backgroundColor: C.border },
+  aiSuggestions: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  aiSuggestionChip: {
+    backgroundColor: `${C.primary}12`,
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: `${C.primary}25`,
+  },
+  aiSuggestionText: { fontSize: 12, fontFamily: "Inter_500Medium", color: C.primary },
+  chatScroll: { maxHeight: 220, paddingHorizontal: 12, paddingTop: 10 },
+  chatBubble: { marginBottom: 8, maxWidth: "85%" },
+  chatBubbleUser: { alignSelf: "flex-end", backgroundColor: C.primary, borderRadius: 14, borderBottomRightRadius: 4, paddingHorizontal: 12, paddingVertical: 8 },
+  chatBubbleAI: { alignSelf: "flex-start", backgroundColor: C.surface, borderRadius: 14, borderBottomLeftRadius: 4, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: C.border, flexDirection: "row", alignItems: "flex-start", gap: 6 },
+  aiBubbleIcon: { marginTop: 2 },
+  chatBubbleText: { fontSize: 14, lineHeight: 21 },
+  chatBubbleTextUser: { fontFamily: "Inter_400Regular", color: "#fff" },
+  chatBubbleTextAI: { fontFamily: "Inter_400Regular", color: C.text, flex: 1 },
+  aiInputRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    padding: 10,
+    borderTopWidth: 1,
+    borderTopColor: `${C.primary}15`,
+  },
+  aiInput: {
+    flex: 1,
+    backgroundColor: C.surface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: C.border,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    fontSize: 14,
+    fontFamily: "Inter_400Regular",
+    color: C.text,
+  },
+  aiSendBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: C.primary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  aiSendBtnDisabled: { opacity: 0.4 },
 
-  aiPromptBanner: { flexDirection: "row", alignItems: "center", gap: 8, marginHorizontal: 16, marginTop: 16, padding: 12, backgroundColor: `${C.primary}0A`, borderRadius: 12, borderWidth: 1, borderColor: `${C.primary}25` },
+  aiPromptBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginHorizontal: 20,
+    marginBottom: 12,
+    backgroundColor: `${C.primary}08`,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: `${C.primary}20`,
+  },
   aiPromptText: { flex: 1, fontSize: 13, fontFamily: "Inter_500Medium", color: C.primary },
 
-  footer: { position: "absolute", bottom: 0, left: 0, right: 0, backgroundColor: C.background, borderTopWidth: 1, borderTopColor: C.border, padding: 16 },
-  completeBtn: { backgroundColor: C.primary, borderRadius: 14, paddingVertical: 15, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
-  completeBtnDisabled: { backgroundColor: C.border },
-  completeBtnText: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: "#fff" },
-  footerHint: { flexDirection: "row", alignItems: "center", gap: 8, justifyContent: "center" },
-  footerHintText: { fontSize: 13, fontFamily: "Inter_400Regular", color: C.textSecondary, flex: 1, textAlign: "center" },
-  moduleCompleteBadge: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, backgroundColor: "#ECFDF5", borderRadius: 14, paddingVertical: 15 },
-  moduleCompleteBadgeText: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: "#059669" },
+  contentCard: {
+    backgroundColor: C.surface, marginHorizontal: 20, borderRadius: 16, padding: 20, borderWidth: 1, borderColor: C.border, gap: 4,
+  },
+  contentHeading: {
+    fontSize: 12, fontFamily: "Inter_700Bold", color: C.primary, letterSpacing: 0.8, marginTop: 16, marginBottom: 6,
+  },
+  contentBlock: { gap: 4, marginBottom: 4 },
+  contentText: { fontSize: 15, fontFamily: "Inter_400Regular", color: C.text, lineHeight: 24 },
+  bulletRow: { flexDirection: "row", gap: 10, alignItems: "flex-start", marginLeft: 4 },
+  bulletDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: C.primary, marginTop: 9 },
+  bulletNum: { fontSize: 15, fontFamily: "Inter_700Bold", color: C.primary, width: 20 },
+  bulletText: { fontSize: 15, fontFamily: "Inter_400Regular", color: C.text, lineHeight: 24, flex: 1 },
+  footer: {
+    paddingHorizontal: 20, paddingTop: 16, backgroundColor: C.background, borderTopWidth: 1, borderTopColor: C.border,
+  },
+  completeBtn: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, backgroundColor: C.primary, borderRadius: 14, padding: 16,
+  },
+  completeBtnText: { color: "#fff", fontSize: 16, fontFamily: "Inter_600SemiBold" },
+  completedBadge: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, backgroundColor: `${C.success}12`, borderRadius: 14, padding: 16, borderWidth: 1, borderColor: `${C.success}20`,
+  },
+  completedText: { fontSize: 16, fontFamily: "Inter_600SemiBold", color: C.success },
 });

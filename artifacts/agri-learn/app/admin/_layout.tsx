@@ -1,5 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import { router, Stack, usePathname } from "expo-router";
+import * as Haptics from "expo-haptics";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
@@ -15,6 +16,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "@/context/AuthContext";
 import ADMIN_CONFIG from "@/constants/adminConfig";
+import { useFlaggedFarmers } from "@/hooks/useAdmin";
 
 const SIDEBAR_BG = "#1B3A2A";
 const SIDEBAR_ACTIVE = "#2D6A4F";
@@ -25,11 +27,12 @@ const SIDEBAR_WIDTH = 260;
 const BREAKPOINT = 768;
 
 const MAIN_NAV = [
-  { id: "index",    label: "Dashboard",  icon: "grid",         path: "/admin" },
-  { id: "users",    label: "Users",      icon: "users",        path: "/admin/users" },
-  { id: "modules",  label: "Modules",    icon: "book-open",    path: "/admin/modules" },
-  { id: "listings", label: "Market",     icon: "shopping-bag", path: "/admin/listings" },
-  { id: "logs",     label: "Settings",   icon: "settings",     path: "/admin/logs" },
+  { id: "index",    label: "Dashboard",  icon: "grid",           path: "/admin" },
+  { id: "users",    label: "Users",      icon: "users",          path: "/admin/users" },
+  { id: "alerts",   label: "Alerts",     icon: "alert-triangle", path: "/admin/alerts" },
+  { id: "modules",  label: "Modules",    icon: "book-open",      path: "/admin/modules" },
+  { id: "listings", label: "Market",     icon: "shopping-bag",   path: "/admin/listings" },
+  { id: "logs",     label: "Settings",   icon: "settings",       path: "/admin/logs" },
 ];
 
 function isPathActive(currentPath: string, itemPath: string) {
@@ -37,14 +40,66 @@ function isPathActive(currentPath: string, itemPath: string) {
   return currentPath.startsWith(itemPath);
 }
 
+const MOBILE_BREAKPOINT = 768;
+
+function AdminBottomNav({
+  pathname,
+  onSignOut,
+  insets,
+  alertCount,
+}: {
+  pathname: string;
+  onSignOut: () => void;
+  insets: { bottom: number };
+  alertCount: number;
+}) {
+  return (
+    <View style={[bottomNav.container, { paddingBottom: Math.max(insets.bottom, 8) }]}>
+      {MAIN_NAV.map((item) => {
+        const active = isPathActive(pathname, item.path);
+        const showBadge = item.id === "alerts" && alertCount > 0;
+        return (
+          <Pressable
+            key={item.id}
+            style={bottomNav.tab}
+            onPress={() => router.replace(item.path as any)}
+          >
+            <View style={{ position: "relative" }}>
+              <Feather
+                name={item.icon as any}
+                size={20}
+                color={active ? SIDEBAR_ACTIVE : (showBadge ? "#DC2626" : "#9CA3AF")}
+              />
+              {showBadge && (
+                <View style={bottomNav.badge}>
+                  <Text style={bottomNav.badgeText}>{alertCount > 9 ? "9+" : alertCount}</Text>
+                </View>
+              )}
+            </View>
+            <Text style={[bottomNav.tabLabel, active && bottomNav.tabLabelActive, showBadge && { color: "#DC2626" }]}>
+              {item.label}
+            </Text>
+          </Pressable>
+        );
+      })}
+      <Pressable style={bottomNav.tab} onPress={onSignOut}>
+        <Feather name="log-out" size={20} color="#9CA3AF" />
+        <Text style={bottomNav.tabLabel}>Sign Out</Text>
+      </Pressable>
+    </View>
+  );
+}
+
 function AdminSidebar({
   pathname,
   profile,
   onSignOut,
+  alertCount,
 }: {
   pathname: string;
   profile: any;
   onSignOut: () => void;
+  alertCount: number;
 }) {
   const initials = (profile?.full_name ?? "SA")
     .split(" ")
@@ -53,8 +108,8 @@ function AdminSidebar({
     .toUpperCase()
     .slice(0, 2);
 
-  const sidebarNav = MAIN_NAV.slice(0, 4);
-  const accountNav = MAIN_NAV.slice(4);
+  const sidebarNav = MAIN_NAV.slice(0, 5);
+  const accountNav = MAIN_NAV.slice(5);
 
   return (
     <View style={sidebar.container}>
@@ -71,6 +126,7 @@ function AdminSidebar({
       <Text style={sidebar.sectionLabel}>MAIN MENU</Text>
       {sidebarNav.map((item) => {
         const active = isPathActive(pathname, item.path);
+        const showBadge = item.id === "alerts" && alertCount > 0;
         return (
           <Pressable
             key={item.id}
@@ -85,6 +141,11 @@ function AdminSidebar({
             <Text style={[sidebar.navLabel, active && sidebar.navLabelActive]}>
               {item.label}
             </Text>
+            {showBadge && (
+              <View style={sidebar.alertBadge}>
+                <Text style={sidebar.alertBadgeText}>{alertCount > 9 ? "9+" : alertCount}</Text>
+              </View>
+            )}
           </Pressable>
         );
       })}
@@ -140,9 +201,11 @@ function AdminSidebar({
 function AdminBottomBar({
   pathname,
   onSignOut,
+  alertCount,
 }: {
   pathname: string;
   onSignOut: () => void;
+  alertCount: number;
 }) {
   const insets = useSafeAreaInsets();
 
@@ -150,18 +213,26 @@ function AdminBottomBar({
     <View style={[bottomBar.container, { paddingBottom: insets.bottom || 8 }]}>
       {MAIN_NAV.map((item) => {
         const active = isPathActive(pathname, item.path);
+        const showBadge = item.id === "alerts" && alertCount > 0;
         return (
           <Pressable
             key={item.id}
             style={bottomBar.tab}
             onPress={() => router.replace(item.path as any)}
           >
-            <Feather
-              name={item.icon as any}
-              size={22}
-              color={active ? "#2D6A4F" : "#9CA3AF"}
-            />
-            <Text style={[bottomBar.label, active && bottomBar.labelActive]}>
+            <View style={{ position: "relative" }}>
+              <Feather
+                name={item.icon as any}
+                size={22}
+                color={active ? "#2D6A4F" : (showBadge ? "#DC2626" : "#9CA3AF")}
+              />
+              {showBadge && (
+                <View style={bottomBar.badge}>
+                  <Text style={bottomBar.badgeText}>{alertCount > 9 ? "9+" : alertCount}</Text>
+                </View>
+              )}
+            </View>
+            <Text style={[bottomBar.label, active && bottomBar.labelActive, showBadge && { color: "#DC2626" }]}>
               {item.label}
             </Text>
           </Pressable>
@@ -176,16 +247,19 @@ export default function AdminLayout() {
   const insets = useSafeAreaInsets();
   const pathname = usePathname();
   const { width } = useWindowDimensions();
-  const isWide = width >= BREAKPOINT;
+  const isMobile = width < MOBILE_BREAKPOINT;
+  const { data: flagged = [] } = useFlaggedFarmers();
+  const alertCount = (flagged as any[]).filter((f) => !f.suspended).length;
 
   const [verified, setVerified] = useState(false);
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleVerify = async () => {
+  const handleVerifyCredentials = async () => {
     if (!email.trim() || !password) {
       setError("Please enter your email and password.");
       return;
@@ -198,6 +272,7 @@ export default function AdminLayout() {
 
     if (!emailMatch || !passMatch) {
       setLoading(false);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       setError("Incorrect admin credentials. Please try again.");
       return;
     }
@@ -210,6 +285,8 @@ export default function AdminLayout() {
       return;
     }
 
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    setError("");
     setVerified(true);
   };
 
@@ -218,6 +295,7 @@ export default function AdminLayout() {
     setVerified(false);
     setEmail("");
     setPassword("");
+    setError("");
     router.replace("/(tabs)");
   };
 
@@ -249,12 +327,13 @@ export default function AdminLayout() {
               <Feather name="mail" size={16} color="#9CA3AF" style={{ paddingLeft: 14 }} />
               <TextInput
                 style={gate.input}
-                placeholder="admin@agrilearn.co.za"
+                placeholder="Admin email address"
                 placeholderTextColor="#9CA3AF"
                 value={email}
                 onChangeText={setEmail}
                 autoCapitalize="none"
                 keyboardType="email-address"
+                autoComplete="email"
               />
             </View>
           </View>
@@ -270,6 +349,7 @@ export default function AdminLayout() {
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry={!showPassword}
+                autoComplete="password"
               />
               <Pressable
                 onPress={() => setShowPassword(!showPassword)}
@@ -282,15 +362,15 @@ export default function AdminLayout() {
 
           <Pressable
             style={({ pressed }) => [gate.verifyBtn, { opacity: pressed || loading ? 0.85 : 1 }]}
-            onPress={handleVerify}
+            onPress={handleVerifyCredentials}
             disabled={loading}
           >
             {loading ? (
               <ActivityIndicator color="#fff" />
             ) : (
               <>
-                <Feather name="shield" size={17} color="#fff" />
-                <Text style={gate.verifyBtnText}>Verify & Enter</Text>
+                <Feather name="arrow-right" size={17} color="#fff" />
+                <Text style={gate.verifyBtnText}>Sign In</Text>
               </>
             )}
           </Pressable>
@@ -306,51 +386,50 @@ export default function AdminLayout() {
     );
   }
 
-  if (isWide) {
+  const stackContent = (
+    <Stack screenOptions={{ headerShown: false, animation: "none" }}>
+      <Stack.Screen name="index" />
+      <Stack.Screen name="users" />
+      <Stack.Screen name="alerts" />
+      <Stack.Screen name="listings" />
+      <Stack.Screen name="modules" />
+      <Stack.Screen name="logs" />
+    </Stack>
+  );
+
+  if (isMobile) {
     return (
-      <View style={{ flex: 1, flexDirection: "row", backgroundColor: "#F0F4F2" }}>
-        <AdminSidebar pathname={pathname} profile={profile} onSignOut={handleSignOut} />
-        <View style={{ flex: 1 }}>
-          <Stack screenOptions={{ headerShown: false, animation: "none" }}>
-            <Stack.Screen name="index" />
-            <Stack.Screen name="users" />
-            <Stack.Screen name="listings" />
-            <Stack.Screen name="modules" />
-            <Stack.Screen name="logs" />
-          </Stack>
+      <View style={{ flex: 1, flexDirection: "column", backgroundColor: "#F0F4F2" }}>
+        <View style={[mobileHeader.bar, { paddingTop: insets.top + 8 }]}>
+          <View style={mobileHeader.logoRow}>
+            <View style={mobileHeader.logoIcon}>
+              <Feather name="feather" size={14} color="#fff" />
+            </View>
+            <Text style={mobileHeader.title}>AgriLearn</Text>
+            <Text style={mobileHeader.badge}>Admin</Text>
+          </View>
+          {alertCount > 0 && (
+            <View style={mobileHeader.alertPill}>
+              <Feather name="alert-triangle" size={12} color="#DC2626" />
+              <Text style={mobileHeader.alertPillText}>{alertCount} alert{alertCount !== 1 ? "s" : ""}</Text>
+            </View>
+          )}
         </View>
+        <View style={{ flex: 1 }}>{stackContent}</View>
+        <AdminBottomNav
+          pathname={pathname}
+          onSignOut={handleSignOut}
+          insets={insets}
+          alertCount={alertCount}
+        />
       </View>
     );
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#F0F4F2" }}>
-      <View style={[mobileHeader.bar, { paddingTop: insets.top + 8 }]}>
-        <View style={mobileHeader.logoRow}>
-          <View style={mobileHeader.logoIcon}>
-            <Feather name="feather" size={14} color="#fff" />
-          </View>
-          <Text style={mobileHeader.title}>AgriLearn Admin</Text>
-        </View>
-        <Pressable
-          onPress={handleSignOut}
-          style={({ pressed }) => [mobileHeader.signOutBtn, { opacity: pressed ? 0.7 : 1 }]}
-        >
-          <Feather name="log-out" size={16} color={SIDEBAR_MUTED} />
-        </Pressable>
-      </View>
-
-      <View style={{ flex: 1 }}>
-        <Stack screenOptions={{ headerShown: false, animation: "none" }}>
-          <Stack.Screen name="index" />
-          <Stack.Screen name="users" />
-          <Stack.Screen name="listings" />
-          <Stack.Screen name="modules" />
-          <Stack.Screen name="logs" />
-        </Stack>
-      </View>
-
-      <AdminBottomBar pathname={pathname} onSignOut={handleSignOut} />
+    <View style={{ flex: 1, flexDirection: "row", backgroundColor: "#F0F4F2" }}>
+      <AdminSidebar pathname={pathname} profile={profile} onSignOut={handleSignOut} alertCount={alertCount} />
+      <View style={{ flex: 1 }}>{stackContent}</View>
     </View>
   );
 }
@@ -464,6 +543,21 @@ const sidebar = StyleSheet.create({
     fontFamily: "Inter_500Medium",
     color: SIDEBAR_MUTED,
   },
+  alertBadge: {
+    marginLeft: "auto" as any,
+    backgroundColor: "#DC2626",
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 5,
+  },
+  alertBadgeText: {
+    fontSize: 10,
+    fontFamily: "Inter_700Bold",
+    color: "#fff",
+  },
 });
 
 const mobileHeader = StyleSheet.create({
@@ -493,8 +587,32 @@ const mobileHeader = StyleSheet.create({
     fontFamily: "Inter_700Bold",
     color: "#fff",
   },
+  badge: {
+    fontSize: 10,
+    fontFamily: "Inter_700Bold",
+    color: "#2D6A4F",
+    backgroundColor: "#fff",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    marginLeft: 4,
+  },
   signOutBtn: {
     padding: 6,
+  },
+  alertPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: "#FEE2E2",
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  alertPillText: {
+    fontSize: 11,
+    fontFamily: "Inter_700Bold",
+    color: "#DC2626",
   },
 });
 
@@ -522,6 +640,23 @@ const bottomBar = StyleSheet.create({
     color: "#2D6A4F",
     fontFamily: "Inter_600SemiBold",
   },
+  badge: {
+    position: "absolute",
+    top: -4,
+    right: -6,
+    backgroundColor: "#DC2626",
+    borderRadius: 8,
+    minWidth: 16,
+    height: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 3,
+  },
+  badgeText: {
+    fontSize: 9,
+    fontFamily: "Inter_700Bold",
+    color: "#fff",
+  },
 });
 
 const gate = StyleSheet.create({
@@ -533,6 +668,54 @@ const gate = StyleSheet.create({
     alignSelf: "center",
     width: "100%",
   },
+
+  // ── Steps ──
+  steps: {
+    marginBottom: 8,
+  },
+  stepRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 0,
+    marginBottom: 8,
+  },
+  stepDot: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "#E5E7EB",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  stepDotActive: {
+    backgroundColor: "#2D6A4F",
+  },
+  stepLine: {
+    flex: 1,
+    height: 2,
+    backgroundColor: "#E5E7EB",
+    maxWidth: 80,
+  },
+  stepLineActive: {
+    backgroundColor: "#2D6A4F",
+  },
+  stepLabels: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingHorizontal: 4,
+  },
+  stepLabel: {
+    fontSize: 11,
+    fontFamily: "Inter_500Medium",
+    color: "#9CA3AF",
+  },
+  stepLabelActive: {
+    color: "#2D6A4F",
+    fontFamily: "Inter_600SemiBold",
+  },
+
+  // ── Common ──
   iconBox: {
     width: 64,
     height: 64,
@@ -602,4 +785,49 @@ const gate = StyleSheet.create({
     borderColor: "#E5E7EB",
   },
   cancelBtnText: { color: "#1A1A1A", fontSize: 16, fontFamily: "Inter_600SemiBold" },
+
+});
+
+const bottomNav = StyleSheet.create({
+  container: {
+    flexDirection: "row",
+    backgroundColor: "#fff",
+    borderTopWidth: 1,
+    borderTopColor: "#E5E7EB",
+    paddingTop: 8,
+    paddingHorizontal: 4,
+  },
+  tab: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 3,
+    paddingVertical: 4,
+  },
+  tabLabel: {
+    fontSize: 10,
+    fontFamily: "Inter_500Medium",
+    color: "#9CA3AF",
+  },
+  tabLabelActive: {
+    color: SIDEBAR_ACTIVE,
+    fontFamily: "Inter_600SemiBold",
+  },
+  badge: {
+    position: "absolute",
+    top: -4,
+    right: -6,
+    backgroundColor: "#DC2626",
+    borderRadius: 8,
+    minWidth: 16,
+    height: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 3,
+  },
+  badgeText: {
+    fontSize: 9,
+    fontFamily: "Inter_700Bold",
+    color: "#fff",
+  },
 });

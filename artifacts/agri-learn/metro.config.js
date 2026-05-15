@@ -9,21 +9,37 @@ const config = getDefaultConfig(__dirname);
 // classic "Invalid hook call / Cannot read properties of null (reading
 // 'useContext')" crash. Force every resolution of these packages to use
 // the copy that lives in agri-learn's own node_modules.
+//
+// react-native-screens: root has 4.23.0, agri-learn has 4.16.0. Without
+// deduplication Metro may bundle 4.23.0 for some imports while native
+// binary expects 4.16.0, causing NavigationContent context errors.
 const DEDUPE = [
   "react",
   "react-dom",
   "react-native",
   "react-native-web",
   "react-reconciler",
+  "react-native-screens",
+  "@react-navigation/core",
+  "@react-navigation/native",
+  "@react-navigation/bottom-tabs",
+  "@react-navigation/elements",
 ];
 
 config.resolver.resolveRequest = (context, moduleName, platform) => {
   const base = moduleName.split("/")[0];
-  if (DEDUPE.includes(base)) {
-    return {
-      type: "sourceFile",
-      filePath: require.resolve(moduleName, { paths: [__dirname] }),
-    };
+  const scopedBase = moduleName.startsWith("@")
+    ? moduleName.split("/").slice(0, 2).join("/")
+    : base;
+  if (DEDUPE.includes(base) || DEDUPE.includes(scopedBase)) {
+    try {
+      return {
+        type: "sourceFile",
+        filePath: require.resolve(moduleName, { paths: [__dirname] }),
+      };
+    } catch {
+      // fall through to default resolution if not found locally
+    }
   }
   return context.resolveRequest(context, moduleName, platform);
 };

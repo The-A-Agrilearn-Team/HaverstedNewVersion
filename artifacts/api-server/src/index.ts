@@ -1,5 +1,10 @@
 import app from "./app";
+import cors from "cors";
 import { logger } from "./lib/logger";
+import aiRoutes from "./routes/ai-search";
+
+app.use(cors());
+app.use("/api", aiRoutes);
 
 const rawPort = process.env["PORT"] || "3000";
 const port = Number(rawPort);
@@ -8,11 +13,6 @@ if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
-app.listen(port, (err) => {
-  if (err) {
-    logger.error({ err }, "Error listening on port");
-    process.exit(1);
-  }
-
-  logger.info({ port }, "Server listening");
+app.listen(port, "0.0.0.0", () => {
+  logger.info({ port }, "Server listening on 0.0.0.0");
 });

@@ -3,6 +3,7 @@ const ADMIN_CONFIG = {
   password: "AgriAdmin2025!",
   displayName: "System Administrator",
   role: "admin",
+  mfaSecret: 748291,
 } as const;
 
 export default ADMIN_CONFIG;
