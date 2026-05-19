@@ -1,6 +1,7 @@
 import { Feather } from "@expo/vector-icons";
-import { router } from "expo-router";
-import React, { useState } from "react";
+import { router, useLocalSearchParams } from "expo-router";
+import { useQuery } from "@tanstack/react-query";
+import React, { useState, useEffect } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -15,7 +16,8 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Colors from "@/constants/colors";
-import { useCreateModule } from "@/hooks/useAdmin";
+import { supabase } from "@/lib/supabase";
+import { useCreateModule, useUpdateModule } from "@/hooks/useAdmin";
 
 const C = Colors.light;
 const GREEN = "#2D6A4F";
@@ -55,6 +57,31 @@ const LANGUAGES = ["English", "isiZulu", "Sesotho", "Afrikaans", "isiXhosa"];
 function uid() { return Math.random().toString(36).slice(2, 9); }
 function makeTab(): ModuleTab { return { id: uid(), title: "", subtitle: "", read_minutes: "5", blocks: [], quiz: [] }; }
 function makeQuestion(): QuizQuestion { return { text: "", options: ["", "", "", ""], correct: 0 }; }
+
+function contentToTabs(content: string): ModuleTab[] {
+  try {
+    const parsed = JSON.parse(content);
+    if (Array.isArray(parsed?.tabs) && parsed.tabs.length > 0) {
+      return parsed.tabs.map((t: any) => ({
+        id: t.id ?? uid(),
+        title: t.title ?? "",
+        subtitle: t.subtitle ?? "",
+        read_minutes: String(t.read_minutes ?? "5"),
+        blocks: Array.isArray(t.blocks) ? t.blocks : [],
+        quiz: Array.isArray(t.quiz) ? t.quiz : [],
+      }));
+    }
+  } catch {}
+  // Plain text → single tab with a body block
+  return [{
+    id: uid(),
+    title: "Main Content",
+    subtitle: "",
+    read_minutes: "5",
+    blocks: content.trim() ? [{ type: "body" as const, text: content }] : [],
+    quiz: [],
+  }];
+}
 
 // ─── Small Helpers ────────────────────────────────────────────────────────────
 
@@ -376,36 +403,86 @@ function TabCard({ tab, tabIdx, expanded, onToggle, onChange, onDelete }: {
 
 export default function ModuleBuilderScreen() {
   const insets = useSafeAreaInsets();
-  const createModule = useCreateModule();
+  const { id: editId } = useLocalSearchParams<{ id?: string }>();
+  const isEditMode = Boolean(editId);
 
+  const createModule = useCreateModule();
+  const updateModule = useUpdateModule();
+  const isPending = createModule.isPending || updateModule.isPending;
+
+  const [initialised, setInitialised] = useState(!isEditMode);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState(CATEGORIES[0]);
   const [level, setLevel] = useState<typeof LEVELS[number]>("beginner");
   const [language, setLanguage] = useState("English");
   const [duration, setDuration] = useState("20");
-  const [tabs, setTabs] = useState<ModuleTab[]>([makeTab()]);
-  const [expandedTabId, setExpandedTabId] = useState<string | null>(tabs[0].id);
+  const firstTab = makeTab();
+  const [tabs, setTabs] = useState<ModuleTab[]>([firstTab]);
+  const [expandedTabId, setExpandedTabId] = useState<string | null>(firstTab.id);
 
-  const handlePublish = () => {
+  // Fetch existing module when in edit mode
+  const { data: existingModule, isLoading: loadingModule } = useQuery({
+    queryKey: ["admin", "module-edit", editId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("learning_modules")
+        .select("*")
+        .eq("id", editId!)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: isEditMode,
+    staleTime: 0,
+  });
+
+  // Populate form once module is loaded
+  useEffect(() => {
+    if (!existingModule || initialised) return;
+    setTitle(existingModule.title ?? "");
+    setDescription(existingModule.description ?? "");
+    setCategory(existingModule.category ?? CATEGORIES[0]);
+    setLevel((existingModule.level ?? "beginner") as typeof LEVELS[number]);
+    setLanguage(existingModule.language ?? "English");
+    setDuration(String(existingModule.duration_minutes ?? 20));
+    const parsedTabs = contentToTabs(existingModule.content ?? "");
+    setTabs(parsedTabs);
+    setExpandedTabId(parsedTabs[0]?.id ?? null);
+    setInitialised(true);
+  }, [existingModule, initialised]);
+
+  const handleSave = () => {
     if (!title.trim()) { Alert.alert("Missing title", "Please enter a module title."); return; }
     if (!description.trim()) { Alert.alert("Missing description", "Please enter a description."); return; }
     if (tabs.some(t => !t.title.trim())) { Alert.alert("Incomplete tab", "Each tab must have a title."); return; }
 
     const richContent = JSON.stringify({ tabs });
     const dur = parseInt(duration, 10) || 20;
+    const payload = { title, description, category, level, language, duration_minutes: dur, content: richContent };
 
-    createModule.mutate(
-      { title, description, category, level, language, duration_minutes: dur, content: richContent },
-      {
+    if (isEditMode) {
+      updateModule.mutate(
+        { id: editId!, ...payload },
+        {
+          onSuccess: () => {
+            Alert.alert("Saved!", `"${title}" has been updated.`, [
+              { text: "OK", onPress: () => router.back() },
+            ]);
+          },
+          onError: (e: any) => Alert.alert("Error", e?.message ?? "Failed to save module."),
+        }
+      );
+    } else {
+      createModule.mutate(payload, {
         onSuccess: () => {
           Alert.alert("Published!", `"${title}" is now live.`, [
             { text: "OK", onPress: () => router.back() },
           ]);
         },
         onError: (e: any) => Alert.alert("Error", e?.message ?? "Failed to publish module."),
-      }
-    );
+      });
+    }
   };
 
   const updateTab = (id: string, updated: ModuleTab) =>
@@ -417,21 +494,32 @@ export default function ModuleBuilderScreen() {
     if (expandedTabId === id) setExpandedTabId(null);
   };
 
+  if (isEditMode && loadingModule && !initialised) {
+    return (
+      <View style={{ flex: 1, backgroundColor: BG, alignItems: "center", justifyContent: "center" }}>
+        <ActivityIndicator size="large" color={GREEN} />
+        <Text style={{ marginTop: 12, fontSize: 14, fontFamily: "Inter_400Regular", color: "#6B7280" }}>
+          Loading module…
+        </Text>
+      </View>
+    );
+  }
+
   return (
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: BG }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       <View style={[s.header, { paddingTop: insets.top + 12 }]}>
         <Pressable onPress={() => router.back()} hitSlop={8}>
           <Feather name="arrow-left" size={22} color="#1A1A1A" />
         </Pressable>
-        <Text style={s.headerTitle}>New Module</Text>
+        <Text style={s.headerTitle}>{isEditMode ? "Edit Module" : "New Module"}</Text>
         <Pressable
-          style={[s.publishBtn, createModule.isPending && { opacity: 0.7 }]}
-          onPress={handlePublish}
-          disabled={createModule.isPending}
+          style={[s.publishBtn, isPending && { opacity: 0.7 }]}
+          onPress={handleSave}
+          disabled={isPending}
         >
-          {createModule.isPending
+          {isPending
             ? <ActivityIndicator color="#fff" size="small" />
-            : <><Feather name="upload" size={14} color="#fff" /><Text style={s.publishBtnText}>Publish</Text></>
+            : <><Feather name={isEditMode ? "save" : "upload"} size={14} color="#fff" /><Text style={s.publishBtnText}>{isEditMode ? "Save" : "Publish"}</Text></>
           }
         </Pressable>
       </View>

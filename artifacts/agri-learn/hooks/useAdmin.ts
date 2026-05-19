@@ -285,6 +285,34 @@ export function useCreateModule() {
   });
 }
 
+export function useUpdateModule() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (module: {
+      id: string;
+      title: string;
+      description: string;
+      category: string;
+      level: string;
+      duration_minutes: number;
+      content: string;
+      language: string;
+    }) => {
+      const { id, ...rest } = module;
+      const { error } = await supabase
+        .from("learning_modules")
+        .update(rest)
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ["admin", "modules"] });
+      qc.invalidateQueries({ queryKey: ["module", vars.id] });
+      qc.invalidateQueries({ queryKey: ["modules"] });
+    },
+  });
+}
+
 export function useActivityLog() {
   return useQuery({
     queryKey: ["admin", "logs"],
