@@ -27,6 +27,7 @@ import {
 } from "@/hooks/useNotifications";
 import { useCreateOrder } from "@/hooks/useOrders";
 import { useMarkAsSold } from "@/hooks/useListings";
+import { sendPushToUser } from "@/lib/push-notification";
 
 const C = Colors.light;
 
@@ -244,6 +245,12 @@ export default function ChatScreen() {
       await sendRawMessage.mutateAsync({ receiverId: otherId, listingId, rawContent });
       setOfferQty("");
       setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 150);
+      sendPushToUser(
+        otherId,
+        "New Offer Received",
+        `${profile?.full_name ?? "A buyer"} made an offer on "${listingTitle || "your listing"}"`,
+        { otherId: user?.id ?? "", otherName: profile?.full_name ?? "Buyer", listingId: listingId ?? "", listingTitle: listingTitle ?? "" }
+      );
     } catch (err: any) {
       Alert.alert("Offer Failed", err?.message ?? "Could not send offer. Please try again.");
     }
@@ -272,6 +279,12 @@ export default function ChatScreen() {
         listingId,
         text: `Offer accepted! ✓ Your order for ${originalOffer?.quantity} ${originalOffer?.unit} has been confirmed. I'll let you know when it's ready for pickup.`,
       });
+      sendPushToUser(
+        otherId,
+        "Offer Accepted! 🎉",
+        `${profile?.full_name ?? "The farmer"} accepted your offer on "${listingTitle || "your listing"}"`,
+        { otherId: user?.id ?? "", otherName: profile?.full_name ?? "Farmer", listingId: listingId ?? "", listingTitle: listingTitle ?? "" }
+      );
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 150);
     } catch (err: any) {
@@ -291,6 +304,12 @@ export default function ChatScreen() {
         listingId,
         text: "I'm unable to accept this offer at the moment. Feel free to send a revised offer.",
       });
+      sendPushToUser(
+        otherId,
+        "Offer Declined",
+        `${profile?.full_name ?? "The farmer"} declined your offer on "${listingTitle || "your listing"}". Feel free to send a revised offer.`,
+        { otherId: user?.id ?? "", otherName: profile?.full_name ?? "Farmer", listingId: listingId ?? "", listingTitle: listingTitle ?? "" }
+      );
       setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 150);
     } catch (err: any) {
       Alert.alert("Error", err?.message ?? "Could not decline the offer. Please try again.");

@@ -5,6 +5,14 @@
     "ignoreDeprecations": "6.0",
     "strict": true,
     "jsx": "react-native",
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    "skipLibCheck": true,
+    "resolvePackageJsonExports": false,
+    "typeRoots": [
+      "./node_modules/@types",
+      "../../node_modules/@types"
+    ],
     "paths": {
       "@/*": [
         "./*"

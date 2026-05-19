@@ -6,10 +6,19 @@ import { Platform } from "react-native";
 import { supabase, Profile } from "@/lib/supabase";
 
 function getCallbackUrl(): string {
-  if (Platform.OS === "web" && typeof window !== "undefined") {
-    return `${window.location.origin}/(auth)/callback`;
-  }
   const replitDomain = process.env.EXPO_PUBLIC_REPLIT_DEV_DOMAIN;
+
+  if (Platform.OS === "web" && typeof window !== "undefined") {
+    const origin = window.location.origin;
+    const isLocalhost =
+      window.location.hostname === "localhost" ||
+      window.location.hostname === "127.0.0.1";
+    if (isLocalhost && replitDomain) {
+      return `https://${replitDomain}/(auth)/callback`;
+    }
+    return `${origin}/(auth)/callback`;
+  }
+
   if (replitDomain) {
     return `https://${replitDomain}/(auth)/callback`;
   }
@@ -22,7 +31,7 @@ interface AuthContextType {
   profile: Profile | null;
   loading: boolean;
   profileLoaded: boolean;
-  signIn: (email: string, password: string) => Promise<{ error?: string }>;
+  signIn: (email: string, password: string) => Promise<{ error?: string; emailNotConfirmed?: boolean }>;
   signUp: (
     email: string,
     password: string,
@@ -31,6 +40,7 @@ interface AuthContextType {
   ) => Promise<{ error?: string }>;
   requestPasswordReset: (email: string) => Promise<{ error?: string }>;
   updatePassword: (password: string) => Promise<{ error?: string }>;
+  resendVerificationEmail: (email: string) => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   updateProfile: (updates: {
@@ -96,6 +106,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      const emailNotConfirmed =
+        error.message.toLowerCase().includes("email not confirmed") ||
+        error.message.toLowerCase().includes("not confirmed");
+      return { error: error.message, emailNotConfirmed };
+    }
+    return {};
+  };
+
+  const resendVerificationEmail = async (email: string) => {
+    const emailRedirectTo = getCallbackUrl();
+    const { error } = await supabase.auth.resend({
+      type: "signup",
+      email,
+      options: { emailRedirectTo },
+    });
     if (error) return { error: error.message };
     return {};
   };
@@ -180,6 +206,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signUp,
         requestPasswordReset,
         updatePassword,
+        resendVerificationEmail,
         signOut,
         refreshProfile,
         updateProfile,

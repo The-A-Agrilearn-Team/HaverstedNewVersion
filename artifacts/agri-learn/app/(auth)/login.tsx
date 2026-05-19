@@ -1,7 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -18,15 +18,42 @@ import { useAuth } from "@/context/AuthContext";
 import Colors from "@/constants/colors";
 
 const C = Colors.light;
+const COOLDOWN_SECONDS = 60;
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
-  const { signIn } = useAuth();
+  const { signIn, resendVerificationEmail } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [emailNotConfirmed, setEmailNotConfirmed] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendSuccess, setResendSuccess] = useState(false);
+  const [resendError, setResendError] = useState("");
+  const [cooldown, setCooldown] = useState(0);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, []);
+
+  const startCooldown = () => {
+    setCooldown(COOLDOWN_SECONDS);
+    timerRef.current = setInterval(() => {
+      setCooldown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timerRef.current!);
+          timerRef.current = null;
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -34,16 +61,46 @@ export default function LoginScreen() {
       return;
     }
     setError("");
+    setEmailNotConfirmed(false);
+    setResendSuccess(false);
+    setResendError("");
     setLoading(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const result = await signIn(email.trim().toLowerCase(), password);
     setLoading(false);
     if (result.error) {
-      setError("Invalid email or password");
+      if (result.emailNotConfirmed) {
+        setEmailNotConfirmed(true);
+        setError("");
+      } else {
+        setError("Invalid email or password. Please try again.");
+      }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } else {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.dismissAll();
+    }
+  };
+
+  const handleResend = async () => {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail) {
+      setResendError("Enter your email address above first.");
+      return;
+    }
+    setResendLoading(true);
+    setResendError("");
+    setResendSuccess(false);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const result = await resendVerificationEmail(normalizedEmail);
+    setResendLoading(false);
+    if (result.error) {
+      setResendError(result.error);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } else {
+      setResendSuccess(true);
+      startCooldown();
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
   };
 
@@ -82,6 +139,54 @@ export default function LoginScreen() {
             </View>
           ) : null}
 
+          {emailNotConfirmed ? (
+            <View style={styles.verifyBanner}>
+              <View style={styles.verifyBannerHeader}>
+                <Feather name="mail" size={18} color="#92400E" />
+                <Text style={styles.verifyBannerTitle}>Email not verified</Text>
+              </View>
+              <Text style={styles.verifyBannerBody}>
+                Please check your inbox and click the verification link to activate your account.
+                If you can't find it, we can send it again.
+              </Text>
+
+              {resendSuccess ? (
+                <View style={styles.resendSuccessRow}>
+                  <Feather name="check-circle" size={14} color={C.primary} />
+                  <Text style={styles.resendSuccessText}>
+                    Verification email sent!
+                    {cooldown > 0 ? ` Resend again in ${cooldown}s.` : ""}
+                  </Text>
+                </View>
+              ) : null}
+
+              {resendError ? (
+                <Text style={styles.resendErrorText}>{resendError}</Text>
+              ) : null}
+
+              <Pressable
+                style={({ pressed }) => [
+                  styles.resendButton,
+                  (cooldown > 0 || resendLoading) && styles.resendButtonDisabled,
+                  { opacity: pressed && cooldown === 0 && !resendLoading ? 0.85 : 1 },
+                ]}
+                onPress={handleResend}
+                disabled={cooldown > 0 || resendLoading}
+              >
+                {resendLoading ? (
+                  <ActivityIndicator size="small" color={C.primary} />
+                ) : (
+                  <>
+                    <Feather name="send" size={14} color={cooldown > 0 ? C.textSecondary : C.primary} />
+                    <Text style={[styles.resendButtonText, cooldown > 0 && { color: C.textSecondary }]}>
+                      {cooldown > 0 ? `Resend in ${cooldown}s` : "Resend verification email"}
+                    </Text>
+                  </>
+                )}
+              </Pressable>
+            </View>
+          ) : null}
+
           <View style={styles.fieldGroup}>
             <Text style={styles.label}>Email address</Text>
             <View style={styles.inputWrapper}>
@@ -91,7 +196,10 @@ export default function LoginScreen() {
                 placeholder="you@example.com"
                 placeholderTextColor={C.textTertiary}
                 value={email}
-                onChangeText={setEmail}
+                onChangeText={(v) => {
+                  setEmail(v);
+                  if (emailNotConfirmed) setEmailNotConfirmed(false);
+                }}
                 autoCapitalize="none"
                 keyboardType="email-address"
                 autoComplete="email"
@@ -225,6 +333,70 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   errorText: { fontSize: 14, color: C.error, fontFamily: "Inter_500Medium", flex: 1 },
+
+  verifyBanner: {
+    backgroundColor: "#FFFBEB",
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: "#FCD34D",
+    padding: 16,
+    gap: 10,
+  },
+  verifyBannerHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  verifyBannerTitle: {
+    fontSize: 15,
+    fontFamily: "Inter_700Bold",
+    color: "#92400E",
+  },
+  verifyBannerBody: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    color: "#78350F",
+    lineHeight: 19,
+  },
+  resendSuccessRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  resendSuccessText: {
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+    color: C.primary,
+    flex: 1,
+  },
+  resendErrorText: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    color: C.error,
+  },
+  resendButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
+    backgroundColor: `${C.primary}12`,
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderColor: `${C.primary}30`,
+    alignSelf: "flex-start",
+  },
+  resendButtonDisabled: {
+    backgroundColor: C.surface,
+    borderColor: C.border,
+  },
+  resendButtonText: {
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+    color: C.primary,
+  },
+
   fieldGroup: { gap: 6 },
   label: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: C.text },
   inputWrapper: {

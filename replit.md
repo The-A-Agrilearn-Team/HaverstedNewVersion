@@ -43,6 +43,7 @@ Always run pnpm --filter @workspace/api-server run build after changing src/ bef
 The artifacts/api-server: API Server artifact workflow may show as "failed" in the system — use the Start Backend workflow instead (configured via configureWorkflow)
 app/profile/_layout.tsx must NOT exist — nested layout causes "Screen names must be unique" error in expo-router@6
 Orders/Reviews tables need manual migration: run supabase/add_orders_reviews.sql in Supabase Dashboard → SQL Editor before orders/reviews will persist
+Push notifications need manual migration: run supabase/add_push_tokens.sql in Supabase Dashboard → SQL Editor to add the expo_push_token column to profiles
 Offer messages stored in existing messages table as JSON ({type:"offer", quantity, price_per_unit, unit, listing_title, status, buyer_name}); useUpdateOfferStatus patches the content JSON in-place
 Pointers
 Supabase docs: https://supabase.com/docs
