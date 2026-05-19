@@ -106,7 +106,7 @@ export default function ModulesScreen() {
       >
         <View style={styles.topRow}>
           <Text style={styles.count}>{modules.length} module{modules.length !== 1 ? "s" : ""}</Text>
-          <Pressable style={styles.addBtn} onPress={() => setShowForm(true)}>
+          <Pressable style={styles.addBtn} onPress={() => router.push("/admin/module-builder" as any)}>
             <Feather name="plus" size={16} color="#fff" />
             <Text style={styles.addBtnText}>Add Module</Text>
           </Pressable>

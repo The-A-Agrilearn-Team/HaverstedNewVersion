@@ -394,7 +394,9 @@ export default function AdminLayout() {
       <Stack.Screen name="listings" />
       <Stack.Screen name="modules" />
       <Stack.Screen name="logs" />
+      <Stack.Screen name="module-builder" />
     </Stack>
+    
   );
 
   if (isMobile) {

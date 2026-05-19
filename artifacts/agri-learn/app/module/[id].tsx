@@ -2,7 +2,7 @@ import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { router, useLocalSearchParams } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -75,7 +75,18 @@ export default function ModuleDetailScreen() {
   const updateProgress = useUpdateProgress();
 
   const [completed, setCompleted] = useState(false);
+  const [activeTabIdx, setActiveTabIdx] = useState(0);
+  const [quizAnswers, setQuizAnswers] = useState<Record<string, number>>({});
   const isBookmarked = mod ? bookmarkedIds.includes(mod.id) : false;
+
+  const richContent = useMemo(() => {
+    if (!mod?.content) return null;
+    try {
+      const parsed = JSON.parse(mod.content);
+      if (Array.isArray(parsed?.tabs) && parsed.tabs.length > 0) return parsed;
+    } catch {}
+    return null;
+  }, [mod?.content]);
 
   const [aiOpen, setAiOpen] = useState(false);
   const [aiQuestion, setAiQuestion] = useState("");
@@ -369,40 +380,184 @@ export default function ModuleDetailScreen() {
             </View>
           )}
 
-          <View style={styles.contentCard}>
-            {(mod.content || "").split("\n\n").map((block, i) => {
-              const trimmed = block.trim();
-              if (!trimmed) return null;
-              const isHeading = trimmed === trimmed.toUpperCase() && trimmed.length < 60 && !trimmed.startsWith("•") && !trimmed.match(/^\d/);
-              if (isHeading) {
-                return <Text key={i} style={styles.contentHeading}>{trimmed}</Text>;
-              }
-              const lines = trimmed.split("\n");
-              return (
-                <View key={i} style={styles.contentBlock}>
-                  {lines.map((line, j) => {
-                    if (line.startsWith("•")) {
-                      return (
-                        <View key={j} style={styles.bulletRow}>
-                          <View style={styles.bulletDot} />
-                          <Text style={styles.bulletText}>{line.slice(2)}</Text>
+          {richContent ? (
+            <>
+              {/* Tab bar */}
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.tabBar}
+                style={{ marginBottom: 4 }}
+              >
+                {richContent.tabs.map((tab: any, i: number) => (
+                  <Pressable
+                    key={tab.id ?? i}
+                    style={[styles.tabPill, i === activeTabIdx && styles.tabPillActive]}
+                    onPress={() => { setActiveTabIdx(i); Haptics.selectionAsync(); }}
+                  >
+                    <Text style={[styles.tabPillNum, i === activeTabIdx && styles.tabPillNumActive]}>
+                      {i + 1}
+                    </Text>
+                    <Text style={[styles.tabPillText, i === activeTabIdx && styles.tabPillTextActive]} numberOfLines={1}>
+                      {tab.title}
+                    </Text>
+                  </Pressable>
+                ))}
+              </ScrollView>
+
+              {/* Tab content */}
+              {(() => {
+                const tab = richContent.tabs[activeTabIdx];
+                if (!tab) return null;
+                return (
+                  <View style={{ gap: 0 }}>
+                    {/* Tab title block */}
+                    {(tab.subtitle || tab.read_minutes) ? (
+                      <View style={styles.tabTitleBlock}>
+                        <Text style={styles.tabTitle}>{tab.title}</Text>
+                        {tab.subtitle ? <Text style={styles.tabSubtitle}>{tab.subtitle}</Text> : null}
+                        {tab.read_minutes ? (
+                          <View style={styles.tabReadRow}>
+                            <Feather name="clock" size={13} color={C.textTertiary} />
+                            <Text style={styles.tabReadText}>{tab.read_minutes} min read</Text>
+                          </View>
+                        ) : null}
+                      </View>
+                    ) : null}
+
+                    {/* Content blocks */}
+                    <View style={styles.contentCard}>
+                      {(tab.blocks ?? []).map((block: any, bi: number) => {
+                        if (block.type === "heading") {
+                          return <Text key={bi} style={styles.richHeading}>{block.text}</Text>;
+                        }
+                        if (block.type === "body") {
+                          return <Text key={bi} style={styles.contentText}>{block.text}</Text>;
+                        }
+                        if (block.type === "numbered_list") {
+                          return (
+                            <View key={bi} style={{ gap: 8, marginVertical: 4 }}>
+                              {(block.items ?? []).map((item: string, ii: number) => (
+                                <View key={ii} style={styles.bulletRow}>
+                                  <View style={styles.numberedCircle}>
+                                    <Text style={styles.numberedCircleText}>{ii + 1}</Text>
+                                  </View>
+                                  <Text style={styles.bulletText}>{item}</Text>
+                                </View>
+                              ))}
+                            </View>
+                          );
+                        }
+                        if (block.type === "warning") {
+                          return (
+                            <View key={bi} style={styles.warningBox}>
+                              <Feather name="alert-triangle" size={15} color="#DC2626" style={{ marginTop: 2 }} />
+                              <Text style={styles.warningText}>{block.text}</Text>
+                            </View>
+                          );
+                        }
+                        if (block.type === "video") {
+                          return (
+                            <View key={bi} style={styles.videoBlock}>
+                              <Feather name="video" size={22} color={C.primary} />
+                              <View style={{ flex: 1 }}>
+                                <Text style={styles.videoTitle}>{block.title || "Video"}</Text>
+                                {block.url ? <Text style={styles.videoUrl} numberOfLines={1}>{block.url}</Text> : null}
+                              </View>
+                            </View>
+                          );
+                        }
+                        return null;
+                      })}
+                    </View>
+
+                    {/* Knowledge Check */}
+                    {Array.isArray(tab.quiz) && tab.quiz.length > 0 && (
+                      <View style={styles.quizSection}>
+                        <View style={styles.quizHeader}>
+                          <View style={styles.quizIcon}>
+                            <Feather name="help-circle" size={16} color={C.primary} />
+                          </View>
+                          <Text style={styles.quizTitle}>Knowledge Check</Text>
+                          <Text style={styles.quizCount}>{tab.quiz.length} question{tab.quiz.length !== 1 ? "s" : ""}</Text>
                         </View>
-                      );
-                    }
-                    if (line.match(/^\d+\./)) {
-                      return (
-                        <View key={j} style={styles.bulletRow}>
-                          <Text style={styles.bulletNum}>{line.match(/^\d+/)?.[0]}.</Text>
-                          <Text style={styles.bulletText}>{line.replace(/^\d+\.\s*/, "")}</Text>
-                        </View>
-                      );
-                    }
-                    return <Text key={j} style={styles.contentText}>{line}</Text>;
-                  })}
-                </View>
-              );
-            })}
-          </View>
+                        {tab.quiz.map((q: any, qi: number) => {
+                          const answerKey = `${activeTabIdx}-${qi}`;
+                          const selected = quizAnswers[answerKey];
+                          return (
+                            <View key={qi} style={styles.quizQuestion}>
+                              <Text style={styles.quizQuestionText}>{qi + 1}. {q.text}</Text>
+                              {(q.options ?? []).map((opt: string, oi: number) => {
+                                const isSelected = selected === oi;
+                                const isCorrect = q.correct === oi;
+                                const showResult = selected !== undefined;
+                                return (
+                                  <Pressable
+                                    key={oi}
+                                    style={[
+                                      styles.quizOption,
+                                      isSelected && styles.quizOptionSelected,
+                                      showResult && isCorrect && styles.quizOptionCorrect,
+                                      showResult && isSelected && !isCorrect && styles.quizOptionWrong,
+                                    ]}
+                                    onPress={() => {
+                                      if (selected !== undefined) return;
+                                      setQuizAnswers((prev) => ({ ...prev, [answerKey]: oi }));
+                                      Haptics.selectionAsync();
+                                    }}
+                                  >
+                                    <View style={[styles.quizRadio, isSelected && styles.quizRadioFilled]}>
+                                      {isSelected && <View style={styles.quizRadioDot} />}
+                                    </View>
+                                    <Text style={styles.quizOptionText}>{opt}</Text>
+                                  </Pressable>
+                                );
+                              })}
+                            </View>
+                          );
+                        })}
+                      </View>
+                    )}
+                  </View>
+                );
+              })()}
+            </>
+          ) : (
+            <View style={styles.contentCard}>
+              {(mod.content || "").split("\n\n").map((block, i) => {
+                const trimmed = block.trim();
+                if (!trimmed) return null;
+                const isHeading = trimmed === trimmed.toUpperCase() && trimmed.length < 60 && !trimmed.startsWith("•") && !trimmed.match(/^\d/);
+                if (isHeading) {
+                  return <Text key={i} style={styles.contentHeading}>{trimmed}</Text>;
+                }
+                const lines = trimmed.split("\n");
+                return (
+                  <View key={i} style={styles.contentBlock}>
+                    {lines.map((line, j) => {
+                      if (line.startsWith("•")) {
+                        return (
+                          <View key={j} style={styles.bulletRow}>
+                            <View style={styles.bulletDot} />
+                            <Text style={styles.bulletText}>{line.slice(2)}</Text>
+                          </View>
+                        );
+                      }
+                      if (line.match(/^\d+\./)) {
+                        return (
+                          <View key={j} style={styles.bulletRow}>
+                            <Text style={styles.bulletNum}>{line.match(/^\d+/)?.[0]}.</Text>
+                            <Text style={styles.bulletText}>{line.replace(/^\d+\.\s*/, "")}</Text>
+                          </View>
+                        );
+                      }
+                      return <Text key={j} style={styles.contentText}>{line}</Text>;
+                    })}
+                  </View>
+                );
+              })}
+            </View>
+          )}
 
           {!aiOpen && (
             <Pressable
@@ -553,7 +708,7 @@ const styles = StyleSheet.create({
   aiPromptText: { flex: 1, fontSize: 13, fontFamily: "Inter_500Medium", color: C.primary },
 
   contentCard: {
-    backgroundColor: C.surface, marginHorizontal: 20, borderRadius: 16, padding: 20, borderWidth: 1, borderColor: C.border, gap: 4,
+    backgroundColor: C.surface, marginHorizontal: 20, borderRadius: 16, padding: 20, borderWidth: 1, borderColor: C.border, gap: 12,
   },
   contentHeading: {
     fontSize: 12, fontFamily: "Inter_700Bold", color: C.primary, letterSpacing: 0.8, marginTop: 16, marginBottom: 6,
@@ -564,6 +719,80 @@ const styles = StyleSheet.create({
   bulletDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: C.primary, marginTop: 9 },
   bulletNum: { fontSize: 15, fontFamily: "Inter_700Bold", color: C.primary, width: 20 },
   bulletText: { fontSize: 15, fontFamily: "Inter_400Regular", color: C.text, lineHeight: 24, flex: 1 },
+
+  tabBar: { paddingHorizontal: 20, paddingVertical: 10, gap: 8 },
+  tabPill: {
+    flexDirection: "row", alignItems: "center", gap: 6,
+    paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20,
+    borderWidth: 1.5, borderColor: C.border, backgroundColor: C.surface,
+  },
+  tabPillActive: { backgroundColor: C.primary, borderColor: C.primary },
+  tabPillNum: { fontSize: 12, fontFamily: "Inter_700Bold", color: C.textTertiary },
+  tabPillNumActive: { color: "#fff" },
+  tabPillText: { fontSize: 13, fontFamily: "Inter_500Medium", color: C.textSecondary, maxWidth: 100 },
+  tabPillTextActive: { color: "#fff", fontFamily: "Inter_600SemiBold" },
+
+  tabTitleBlock: { paddingHorizontal: 20, paddingBottom: 16, gap: 6 },
+  tabTitle: { fontSize: 20, fontFamily: "Inter_700Bold", color: C.text, lineHeight: 28 },
+  tabSubtitle: { fontSize: 14, fontFamily: "Inter_400Regular", color: C.textSecondary, lineHeight: 20 },
+  tabReadRow: { flexDirection: "row", alignItems: "center", gap: 5 },
+  tabReadText: { fontSize: 13, fontFamily: "Inter_400Regular", color: C.textTertiary },
+
+  richHeading: { fontSize: 16, fontFamily: "Inter_700Bold", color: C.text, lineHeight: 22, marginTop: 4 },
+  numberedCircle: {
+    width: 26, height: 26, borderRadius: 13, backgroundColor: C.primary,
+    alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1,
+  },
+  numberedCircleText: { fontSize: 12, fontFamily: "Inter_700Bold", color: "#fff" },
+  warningBox: {
+    flexDirection: "row", gap: 10, alignItems: "flex-start",
+    backgroundColor: "#FEF2F2", borderRadius: 10,
+    borderLeftWidth: 3, borderLeftColor: "#DC2626",
+    padding: 12,
+  },
+  warningText: { flex: 1, fontSize: 14, fontFamily: "Inter_400Regular", color: "#DC2626", lineHeight: 20, fontStyle: "italic" },
+  videoBlock: {
+    flexDirection: "row", alignItems: "center", gap: 12,
+    backgroundColor: `${C.primary}08`, borderRadius: 12,
+    padding: 14, borderWidth: 1, borderColor: `${C.primary}20`,
+  },
+  videoTitle: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: C.text },
+  videoUrl: { fontSize: 11, fontFamily: "Inter_400Regular", color: C.textTertiary, marginTop: 2 },
+
+  quizSection: {
+    marginHorizontal: 20, marginTop: 16,
+    backgroundColor: C.surface, borderRadius: 16,
+    borderWidth: 1, borderColor: C.border, overflow: "hidden",
+  },
+  quizHeader: {
+    flexDirection: "row", alignItems: "center", gap: 8,
+    padding: 16, borderBottomWidth: 1, borderBottomColor: C.border,
+  },
+  quizIcon: {
+    width: 30, height: 30, borderRadius: 15,
+    backgroundColor: `${C.primary}12`,
+    alignItems: "center", justifyContent: "center",
+  },
+  quizTitle: { flex: 1, fontSize: 15, fontFamily: "Inter_700Bold", color: C.text },
+  quizCount: { fontSize: 12, fontFamily: "Inter_400Regular", color: C.textTertiary },
+  quizQuestion: { padding: 16, borderBottomWidth: 1, borderBottomColor: C.borderLight, gap: 10 },
+  quizQuestionText: { fontSize: 14, fontFamily: "Inter_700Bold", color: C.text, lineHeight: 20 },
+  quizOption: {
+    flexDirection: "row", alignItems: "center", gap: 12,
+    borderRadius: 10, borderWidth: 1.5, borderColor: C.border,
+    paddingHorizontal: 14, paddingVertical: 12, backgroundColor: C.surface,
+  },
+  quizOptionSelected: { borderColor: C.primary, backgroundColor: `${C.primary}06` },
+  quizOptionCorrect: { borderColor: "#10B981", backgroundColor: "#F0FDF4" },
+  quizOptionWrong: { borderColor: "#DC2626", backgroundColor: "#FEF2F2" },
+  quizOptionText: { fontSize: 14, fontFamily: "Inter_400Regular", color: C.text, flex: 1 },
+  quizRadio: {
+    width: 20, height: 20, borderRadius: 10,
+    borderWidth: 2, borderColor: C.border,
+    alignItems: "center", justifyContent: "center", flexShrink: 0,
+  },
+  quizRadioFilled: { borderColor: C.primary },
+  quizRadioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: C.primary },
   footer: {
     paddingHorizontal: 20, paddingTop: 16, backgroundColor: C.background, borderTopWidth: 1, borderTopColor: C.border,
   },
