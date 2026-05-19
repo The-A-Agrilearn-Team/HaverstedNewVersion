@@ -5,7 +5,7 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import { Platform } from "react-native";
 import { supabase, Profile } from "@/lib/supabase";
 
-function getCallbackUrl(): string {
+function getAppUrl(path: string): string {
   const replitDomain = process.env.EXPO_PUBLIC_REPLIT_DEV_DOMAIN;
 
   if (Platform.OS === "web" && typeof window !== "undefined") {
@@ -14,15 +14,23 @@ function getCallbackUrl(): string {
       window.location.hostname === "localhost" ||
       window.location.hostname === "127.0.0.1";
     if (isLocalhost && replitDomain) {
-      return `https://${replitDomain}/(auth)/callback`;
+      return `https://${replitDomain}${path}`;
     }
-    return `${origin}/(auth)/callback`;
+    return `${origin}${path}`;
   }
 
   if (replitDomain) {
-    return `https://${replitDomain}/(auth)/callback`;
+    return `https://${replitDomain}${path}`;
   }
-  return Linking.createURL("/(auth)/callback");
+  return Linking.createURL(path);
+}
+
+function getCallbackUrl(): string {
+  return getAppUrl("/callback");
+}
+
+function getPasswordResetUrl(): string {
+  return getAppUrl("/forgot-password");
 }
 
 interface AuthContextType {
@@ -155,7 +163,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const requestPasswordReset = async (email: string) => {
-    const redirectTo = getCallbackUrl();
+    const redirectTo = getPasswordResetUrl();
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo,
     });

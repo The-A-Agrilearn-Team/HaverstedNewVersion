@@ -24,9 +24,17 @@ const C = Colors.light;
 type Mode = "request" | "update";
 
 function paramsFromUrl(url: string) {
-  const [, hash = ""] = url.split("#");
-  const query = url.includes("?") ? url.split("?")[1].split("#")[0] : "";
-  return new URLSearchParams([query, hash].filter(Boolean).join("&"));
+  const hashPart = url.includes("#") ? url.split("#")[1] : "";
+  const queryPart = url.includes("?") ? url.split("?")[1].split("#")[0] : "";
+  const combined = [queryPart, hashPart].filter(Boolean).join("&");
+  return new URLSearchParams(combined);
+}
+
+function getCurrentUrl(): string | null {
+  if (Platform.OS === "web" && typeof window !== "undefined") {
+    return window.location.href;
+  }
+  return null;
 }
 
 export default function ForgotPasswordScreen() {
@@ -38,6 +46,7 @@ export default function ForgotPasswordScreen() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [processing, setProcessing] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
@@ -55,14 +64,21 @@ export default function ForgotPasswordScreen() {
       const accessToken = params.get("access_token");
       const refreshToken = params.get("refresh_token");
       const code = params.get("code");
+      const type = params.get("type");
+
+      // Only process if there are actual auth tokens/codes
+      if (!accessToken && !code) return;
+
+      setProcessing(true);
 
       if (accessToken && refreshToken) {
         const { error } = await supabase.auth.setSession({
           access_token: accessToken,
           refresh_token: refreshToken,
         });
+        setProcessing(false);
         if (error) {
-          setError(error.message);
+          setError("Your reset link has expired or is invalid. Please request a new one.");
           return;
         }
         setMode("update");
@@ -72,8 +88,9 @@ export default function ForgotPasswordScreen() {
 
       if (code) {
         const { error } = await supabase.auth.exchangeCodeForSession(code);
+        setProcessing(false);
         if (error) {
-          setError(error.message);
+          setError("Your reset link has expired or is invalid. Please request a new one.");
           return;
         }
         setMode("update");
@@ -81,7 +98,14 @@ export default function ForgotPasswordScreen() {
       }
     };
 
-    Linking.getInitialURL().then(handleRecoveryUrl);
+    // On web, read directly from window.location for reliability with hash fragments
+    const webUrl = getCurrentUrl();
+    if (webUrl) {
+      handleRecoveryUrl(webUrl);
+    } else {
+      Linking.getInitialURL().then(handleRecoveryUrl);
+    }
+
     const subscription = Linking.addEventListener("url", ({ url }) => {
       handleRecoveryUrl(url);
     });
@@ -147,6 +171,17 @@ export default function ForgotPasswordScreen() {
   };
 
   const isUpdateMode = mode === "update";
+
+  if (processing) {
+    return (
+      <View style={{ flex: 1, backgroundColor: C.background, alignItems: "center", justifyContent: "center" }}>
+        <ActivityIndicator size="large" color={C.primary} />
+        <Text style={{ marginTop: 16, fontSize: 15, fontFamily: "Inter_400Regular", color: C.textSecondary }}>
+          Verifying your reset link…
+        </Text>
+      </View>
+    );
+  }
 
   return (
     <KeyboardAvoidingView

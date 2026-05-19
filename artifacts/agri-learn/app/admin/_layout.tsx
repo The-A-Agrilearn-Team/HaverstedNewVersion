@@ -268,20 +268,25 @@ export default function AdminLayout() {
     setLoading(true);
 
     const emailMatch = email.trim().toLowerCase() === ADMIN_CONFIG.email.toLowerCase();
-    const passMatch = password === ADMIN_CONFIG.password;
 
-    if (!emailMatch || !passMatch) {
+    if (!emailMatch) {
       setLoading(false);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      setError("Incorrect admin credentials. Please try again.");
+      setError("That email is not registered as an admin account.");
       return;
     }
 
-    const result = await signIn(ADMIN_CONFIG.email, ADMIN_CONFIG.password);
+    const result = await signIn(email.trim(), password);
     setLoading(false);
 
     if (result.error) {
-      setError("Admin account not found. Please check setup instructions.");
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      setError("Incorrect password. Please try again or use 'Forgot password?' below.");
+      return;
+    }
+
+    if (result.emailNotConfirmed) {
+      setError("Admin email not confirmed. Please check your inbox.");
       return;
     }
 
@@ -373,6 +378,13 @@ export default function AdminLayout() {
                 <Text style={gate.verifyBtnText}>Sign In</Text>
               </>
             )}
+          </Pressable>
+
+          <Pressable
+            style={({ pressed }) => [gate.forgotBtn, { opacity: pressed ? 0.7 : 1 }]}
+            onPress={() => router.replace("/(auth)/forgot-password")}
+          >
+            <Text style={gate.forgotBtnText}>Forgot password?</Text>
           </Pressable>
 
           <Pressable
@@ -779,6 +791,11 @@ const gate = StyleSheet.create({
     marginTop: 4,
   },
   verifyBtnText: { color: "#fff", fontSize: 16, fontFamily: "Inter_600SemiBold" },
+  forgotBtn: {
+    alignItems: "center",
+    paddingVertical: 4,
+  },
+  forgotBtnText: { color: "#2D6A4F", fontSize: 14, fontFamily: "Inter_500Medium" },
   cancelBtn: {
     borderRadius: 14,
     padding: 16,
