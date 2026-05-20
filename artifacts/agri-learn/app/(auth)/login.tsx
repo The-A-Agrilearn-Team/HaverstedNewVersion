@@ -128,7 +128,7 @@ export default function LoginScreen() {
             <Feather name="feather" size={32} color={C.primary} />
           </View>
           <Text style={styles.title}>Welcome back</Text>
-          <Text style={styles.subtitle}>Sign in to your AgriLearn account</Text>
+          <Text style={styles.subtitle}>Sign in to your AgriHub account</Text>
         </View>
 
         <View style={styles.form}>

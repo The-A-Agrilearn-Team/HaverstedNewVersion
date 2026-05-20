@@ -120,7 +120,7 @@ export default function RegisterScreen() {
       >
         <View style={styles.header}>
           <Text style={styles.title}>Create account</Text>
-          <Text style={styles.subtitle}>Join AgriLearn to start learning and selling</Text>
+          <Text style={styles.subtitle}>Join AgriHub to start learning and selling</Text>
         </View>
 
         <View style={styles.form}>
@@ -233,7 +233,7 @@ export default function RegisterScreen() {
             </View>
             <Text style={styles.termsText}>
               I consent to my personal information being used{" "}
-              <Text style={styles.termsHighlight}>only for AgriLearn purposes</Text>. If my details
+              <Text style={styles.termsHighlight}>only for AgriHub purposes</Text>. If my details
               ever need to be shared with a third party, I will be{" "}
               <Text style={styles.termsHighlight}>notified in advance</Text>, in compliance with
               the POPI Act.

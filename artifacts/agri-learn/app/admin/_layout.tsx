@@ -118,7 +118,7 @@ function AdminSidebar({
           <Feather name="feather" size={18} color="#fff" />
         </View>
         <View>
-          <Text style={sidebar.logoTitle}>AgriLearn</Text>
+          <Text style={sidebar.logoTitle}>AgriHub</Text>
           <Text style={sidebar.logoSub}>Admin Portal</Text>
         </View>
       </View>
@@ -419,7 +419,7 @@ export default function AdminLayout() {
             <View style={mobileHeader.logoIcon}>
               <Feather name="feather" size={14} color="#fff" />
             </View>
-            <Text style={mobileHeader.title}>AgriLearn</Text>
+            <Text style={mobileHeader.title}>AgriHub</Text>
             <Text style={mobileHeader.badge}>Admin</Text>
           </View>
           {alertCount > 0 && (

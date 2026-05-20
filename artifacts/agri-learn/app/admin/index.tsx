@@ -143,7 +143,7 @@ export default function AdminDashboard() {
           <Feather name="feather" size={64} color="rgba(255,255,255,0.12)" />
         </View>
         <Text style={styles.bannerGreeting}>Welcome back,</Text>
-        <Text style={styles.bannerTitle}>AgriLearn Admin Portal</Text>
+        <Text style={styles.bannerTitle}>AgriHub Admin Portal</Text>
         <View style={styles.bannerPills}>
           <View style={styles.pill}>
             <Feather name="users" size={13} color="rgba(255,255,255,0.85)" />

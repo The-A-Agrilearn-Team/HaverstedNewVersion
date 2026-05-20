@@ -36,7 +36,7 @@ function GuestBlock() {
       <Text style={styles.deniedTitle}>Learning Hub</Text>
       <Text style={styles.deniedSubtitle}>Register as a farmer to access learning content</Text>
       <Text style={styles.deniedBody}>
-        AgriLearn's Learning Hub is exclusively available to registered farmers. It provides
+        AgriHub's Learning Hub is exclusively available to registered farmers. It provides
         practical training on crops, soil, irrigation, pest control, livestock, and more.
       </Text>
       <View style={styles.deniedDivider} />
@@ -67,7 +67,7 @@ function AccessDenied({ role }: { role: string }) {
       <Text style={styles.deniedTitle}>Learning Hub</Text>
       <Text style={styles.deniedSubtitle}>Not available for {ROLE_LABELS[role] ?? role} accounts</Text>
       <Text style={styles.deniedBody}>
-        The AgriLearn Learning Hub is designed for farmers and farm workers. It provides
+        The AgriHub Learning Hub is designed for farmers and farm workers. It provides
         practical training on crops, soil, irrigation, pest control, and more.
       </Text>
       <View style={styles.deniedDivider} />

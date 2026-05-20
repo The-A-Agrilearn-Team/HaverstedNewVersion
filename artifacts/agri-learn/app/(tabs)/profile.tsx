@@ -255,7 +255,7 @@ export default function ProfileScreen() {
         </Pressable>
       </View>
 
-      <Text style={styles.versionText}>AgriLearn v1.0.0</Text>
+      <Text style={styles.versionText}>AgriHub v1.0.0</Text>
       <View style={{ height: 100 }} />
     </ScrollView>
   );

@@ -90,7 +90,7 @@ export default function HomeScreen() {
           <View style={styles.logoMark}>
             <Feather name="feather" size={18} color="#fff" />
           </View>
-          <Text style={styles.logoText}>AgriLearn</Text>
+          <Text style={styles.logoText}>AgriHub</Text>
         </View>
         <View style={styles.headerRight}>
           {!user && (

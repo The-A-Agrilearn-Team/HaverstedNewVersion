@@ -263,7 +263,7 @@ export default function SettingsScreen() {
         <View style={s.cardBody}>
           <Text style={s.platformTitle}>Platform Information</Text>
           <View style={s.infoGrid}>
-            <InfoCell label="Platform" value="AgriLearn Admin" />
+            <InfoCell label="Platform" value="AgriHub Admin" />
             <InfoCell label="Version" value="1.0.0" />
             <InfoCell label="Region" value="South Africa (ZAR)" />
             <InfoCell label="Supported Languages" value="6 languages" />
