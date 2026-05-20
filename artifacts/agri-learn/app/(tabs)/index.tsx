@@ -25,7 +25,6 @@ const C = Colors.light;
 const QUICK_ACCESS = [
   { label: "Learning\nModules",   icon: "book-open",    color: "#52B788", bg: "#F0FAF4", route: "/(tabs)/learn" },
   { label: "Market\nplace",       icon: "shopping-bag", color: "#3B82F6", bg: "#EFF6FF", route: "/(tabs)/market" },
-  
 ];
 
 const CATEGORIES = [
@@ -85,12 +84,10 @@ export default function HomeScreen() {
       showsVerticalScrollIndicator={false}
     >
       {/* ── Header ── */}
-      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-        <View style={styles.logoRow}>
-          <View style={styles.logoMark}>
-            <Feather name="feather" size={18} color="#fff" />
-          </View>
-          <Text style={styles.logoText}>AgriHub</Text>
+      <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
+        <View style={styles.greetingBlock}>
+          <Text style={styles.welcomeSmall}>{greeting()}, {firstName}! 👋</Text>
+          <Text style={styles.welcomeSub}>Learn, connect and grow</Text>
         </View>
         <View style={styles.headerRight}>
           {!user && (
@@ -129,11 +126,6 @@ export default function HomeScreen() {
             </Pressable>
           )}
         </View>
-      </View>
-
-      <View style={{ paddingHorizontal: 20, paddingTop: 6, paddingBottom: 20 }}>
-        <Text style={styles.welcomeSmall}>{greeting()}, {firstName}! 👋</Text>
-        <Text style={styles.welcomeSub}>Learn, connect and grow your farming business</Text>
       </View>
 
       {/* ── Hero Banner ── */}
@@ -396,18 +388,9 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 20,
-    paddingBottom: 4,
+    paddingBottom: 20,
   },
-  logoRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  logoMark: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    backgroundColor: C.primary,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  logoText: { fontSize: 18, fontFamily: "Inter_700Bold", color: C.text },
+  greetingBlock: { flex: 1, marginRight: 12 },
   headerRight: { flexDirection: "row", alignItems: "center", gap: 8 },
   signInBtn: {
     backgroundColor: C.primary,
@@ -452,8 +435,8 @@ const styles = StyleSheet.create({
   avatarText: { fontSize: 15, fontFamily: "Inter_700Bold", color: "#fff" },
 
   /* greeting */
-  welcomeSmall: { fontSize: 20, fontFamily: "Inter_700Bold", color: C.text },
-  welcomeSub: { fontSize: 13, fontFamily: "Inter_400Regular", color: C.textSecondary, marginTop: 2 },
+  welcomeSmall: { fontSize: 22, fontFamily: "Inter_700Bold", color: C.text, lineHeight: 28 },
+  welcomeSub: { fontSize: 13, fontFamily: "Inter_400Regular", color: C.textSecondary, marginTop: 3 },
 
   /* hero */
   heroBanner: {
