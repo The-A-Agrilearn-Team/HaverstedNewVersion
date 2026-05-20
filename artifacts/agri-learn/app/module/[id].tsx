@@ -25,15 +25,6 @@ import { askModuleAssistant } from "@/lib/aiSearch";
 
 const C = Colors.light;
 
-const MOCK_MODULES: Record<string, LearningModule> = {
-  "1": { id: "1", title: "Intro to Crop Rotation", description: "Improve soil health through strategic crop rotation techniques.", category: "Crops", level: "beginner", duration_minutes: 15, language: "en", created_at: new Date().toISOString(), content: "Crop rotation is the practice of growing different types of crops in the same area across a sequence of growing seasons.\n\nBENEFITS\n• Reduces soil erosion\n• Increases soil fertility\n• Controls pests and diseases\n• Improves water retention\n\nBASIC 4-YEAR ROTATION\n1. Year 1: Legumes (nitrogen fixers)\n2. Year 2: Brassicas (heavy feeders)\n3. Year 3: Root vegetables\n4. Year 4: Fallow or cover crops\n\nGETTING STARTED\nStart by mapping your land into equal sections and assigning each section a different crop family. Keep detailed records of what grew where each year.\n\nLEGUME CROPS\nLegumes fix atmospheric nitrogen into the soil through symbiotic bacteria in their root nodules. This reduces the need for synthetic nitrogen fertilizers.\n\nExamples: Beans, peas, soybeans, cowpeas, groundnuts\n\nPRACTICAL TIPS\n• Start small — rotate just 2 or 3 crops before adding complexity\n• Keep a farm diary recording crop varieties, yields, and observations\n• Test soil before and after each cycle to track improvement\n• Join a local farming cooperative to share knowledge" },
-  "2": { id: "2", title: "Water Management Basics", description: "Efficient irrigation strategies for small-scale farms.", category: "Irrigation", level: "beginner", duration_minutes: 20, language: "en", created_at: new Date().toISOString(), content: "Efficient water use is critical for profitable, sustainable farming.\n\nDRIP IRRIGATION\nDelivers water directly to the plant root zone, reducing evaporation by up to 60%.\n\nRAINWATER HARVESTING\nCollect and store rainwater during rainy seasons. A 100m² roof can collect ~50,000 litres annually.\n\nSCHEDULING\nWater early morning (4–8 AM) or evening to minimize evaporation.\n\nSOIL MOISTURE MANAGEMENT\n• Sandy soils: Water frequently but in small amounts\n• Clay soils: Water less frequently but more deeply\n• Loamy soils: Ideal, moderate watering schedule\n\nWATER CONSERVATION TIPS\n• Mulch around plants to retain moisture\n• Use raised beds to improve drainage\n• Plant windbreaks to reduce evaporation" },
-  "3": { id: "3", title: "Soil Testing & pH", description: "Understanding soil composition and optimizing for better yields.", category: "Soil", level: "intermediate", duration_minutes: 25, language: "en", created_at: new Date().toISOString(), content: "Knowing your soil composition is the foundation of successful farming.\n\nWHAT TO TEST\n• pH level (ideal: 6.0–7.0 for most crops)\n• Nitrogen (N), Phosphorus (P), Potassium (K)\n• Organic matter content\n• Micronutrients: Iron, Zinc, Manganese\n\nHOW TO TEST\n1. Collect samples from 8–10 spots in your field\n2. Take samples from 15–20cm depth\n3. Mix samples and take a 500g subsample\n4. Use a home test kit or send to an accredited lab\n\nADJUSTING pH\n• Too acidic (below 6.0): Add agricultural lime\n• Too alkaline (above 7.5): Add sulfur or organic matter\n• Retest after 3 months\n\nNPK EXPLAINED\n• Nitrogen (N): Promotes leafy green growth\n• Phosphorus (P): Encourages root development\n• Potassium (K): Improves disease resistance" },
-  "4": { id: "4", title: "Pest Identification Guide", description: "Identify and manage common crop pests in South Africa.", category: "Pest Control", level: "beginner", duration_minutes: 18, language: "en", created_at: new Date().toISOString(), content: "Early identification is key to controlling pest damage.\n\nCOMMON PESTS\n• Aphids: Small, soft-bodied insects clustered on new growth\n• Whiteflies: Tiny white insects on leaf undersides\n• Cutworms: Larvae that cut seedlings at soil level at night\n• Bollworms: Bore into maize ears and cotton bolls\n• Red Spider Mite: Causes yellow stippling in hot, dry conditions\n\nINTEGRATED PEST MANAGEMENT (IPM)\n1. Monitor regularly — walk fields weekly\n2. Set action thresholds — not every pest needs treatment\n3. Use biological controls first\n4. Apply pesticides only as last resort\n\nBIOLOGICAL CONTROLS\n• Ladybirds eat 50–60 aphids per day\n• Ground beetles eat soil-dwelling pests\n• Parasitic wasps attack caterpillars\n• Bt spray targets caterpillars, safe for beneficial insects\n\nSAFE PESTICIDE USE\n• Read and follow label instructions\n• Wear gloves, goggles, and mask\n• Never spray on windy days\n• Respect pre-harvest intervals" },
-  "5": { id: "5", title: "Selling at Farmers Markets", description: "Price and present your produce for maximum sales.", category: "Business", level: "beginner", duration_minutes: 22, language: "en", created_at: new Date().toISOString(), content: "Farmers markets offer better margins than wholesale — but success requires preparation.\n\nPRICING STRATEGY\n• Research competitor prices at the same market\n• Calculate full cost: seeds, water, fertilizer, labor, transport, stall fee\n• Add 25–40% profit margin\n• Price in round numbers for easy change\n\nDISPLAY TIPS\n• Use height variation — raised items at back\n• Keep produce clean, sorted by size\n• Clear, large handwritten price signs\n• Include your farm name and story\n\nCUSTOMER SERVICE\n• Smile and greet every customer\n• Know your produce — storage, cooking tips\n• Offer samples when permitted\n• Build relationships with regulars\n\nRECORD KEEPING\n• Track what sells well each week\n• Record expenses and income for tax\n• Keep records 5 years (SARS requirement)" },
-  "6": { id: "6", title: "Livestock Health Basics", description: "Essential health management for small-scale livestock.", category: "Livestock", level: "beginner", duration_minutes: 30, language: "en", created_at: new Date().toISOString(), content: "Healthy livestock is the foundation of a profitable operation. Prevention is cheaper than treatment.\n\nDAILY CHECKS\n• Fresh, clean water always available\n• Observe for illness: lethargy, isolation, poor appetite\n• Monitor feed consumption\n• Check for injuries and wounds\n\nVACCINATION SCHEDULE\nWork with a local vet to establish a vaccination program:\n• Cattle: Brucellosis, Lumpy Skin Disease, Foot and Mouth\n• Goats/Sheep: Pasteurella, Pulpy Kidney, Anthrax\n• Poultry: Newcastle Disease (monthly for layers), Marek's Disease\n\nSIGNS OF ILLNESS\n• Dull, sunken eyes or discharge\n• Dry, cracked nose (cattle)\n• Rough or dull coat/feathers\n• Isolation from herd\n• Abnormal droppings\n• Labored breathing\n\nPREVENTIVE MEASURES\n• Quarantine new animals 2–3 weeks\n• Clean housing and remove manure regularly\n• Rotate grazing pastures to break parasite cycles\n• Deworm on veterinary schedule" },
-};
-
 interface ChatMessage {
   role: "user" | "assistant";
   text: string;
@@ -50,12 +41,10 @@ function useSingleModule(id: string) {
         .eq("is_active", true)
         .single();
 
-      if (error || !data) {
-        return MOCK_MODULES[id] ?? MOCK_MODULES["1"];
-      }
+      if (error || !data) return null;
       return data as LearningModule;
     },
-    staleTime: 10 * 60 * 1000,
+    staleTime: 0,
     retry: false,
   });
 }
@@ -208,10 +197,31 @@ export default function ModuleDetailScreen() {
     );
   }
 
-  if (isLoading || !mod) {
+  if (isLoading) {
     return (
       <View style={{ flex: 1, backgroundColor: C.background, alignItems: "center", justifyContent: "center" }}>
         <ActivityIndicator size="large" color={C.primary} />
+      </View>
+    );
+  }
+
+  if (!mod) {
+    return (
+      <View style={{ flex: 1, backgroundColor: C.background, alignItems: "center", justifyContent: "center", padding: 32 }}>
+        <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: "#FEF3C7", alignItems: "center", justifyContent: "center", marginBottom: 20 }}>
+          <Feather name="book-open" size={32} color="#D97706" />
+        </View>
+        <Text style={{ fontSize: 20, fontFamily: "Inter_700Bold", color: C.text, marginBottom: 8, textAlign: "center" }}>Module Not Found</Text>
+        <Text style={{ fontSize: 14, fontFamily: "Inter_400Regular", color: C.textSecondary, textAlign: "center", lineHeight: 22, marginBottom: 28 }}>
+          This module may have been removed or is no longer available.
+        </Text>
+        <Pressable
+          style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1, backgroundColor: "#2D6A4F", borderRadius: 12, paddingHorizontal: 24, paddingVertical: 13, flexDirection: "row", alignItems: "center", gap: 8 })}
+          onPress={() => router.back()}
+        >
+          <Feather name="arrow-left" size={16} color="#fff" />
+          <Text style={{ fontSize: 15, fontFamily: "Inter_600SemiBold", color: "#fff" }}>Go Back</Text>
+        </Pressable>
       </View>
     );
   }

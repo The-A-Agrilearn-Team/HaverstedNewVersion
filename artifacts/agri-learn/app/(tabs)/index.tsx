@@ -25,7 +25,7 @@ const C = Colors.light;
 const QUICK_ACCESS = [
   { label: "Learning\nModules",   icon: "book-open",    color: "#52B788", bg: "#F0FAF4", route: "/(tabs)/learn" },
   { label: "Market\nplace",       icon: "shopping-bag", color: "#3B82F6", bg: "#EFF6FF", route: "/(tabs)/market" },
-  { label: "Service\nWindow",     icon: "tool",         color: "#7C3AED", bg: "#F5F3FF", route: "/(tabs)/windows" },
+  
 ];
 
 const CATEGORIES = [
