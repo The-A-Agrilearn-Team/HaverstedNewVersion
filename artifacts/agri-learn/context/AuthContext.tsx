@@ -2,35 +2,14 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Linking from "expo-linking";
 import { Session, User } from "@supabase/supabase-js";
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { Platform } from "react-native";
 import { supabase, Profile } from "@/lib/supabase";
 
-function getAppUrl(path: string): string {
-  const replitDomain = process.env.EXPO_PUBLIC_REPLIT_DEV_DOMAIN;
-
-  if (Platform.OS === "web" && typeof window !== "undefined") {
-    const origin = window.location.origin;
-    const isLocalhost =
-      window.location.hostname === "localhost" ||
-      window.location.hostname === "127.0.0.1";
-    if (isLocalhost && replitDomain) {
-      return `https://${replitDomain}${path}`;
-    }
-    return `${origin}${path}`;
-  }
-
-  if (replitDomain) {
-    return `https://${replitDomain}${path}`;
-  }
-  return Linking.createURL(path);
-}
-
 function getCallbackUrl(): string {
-  return getAppUrl("/callback");
+  return Linking.createURL("/callback");
 }
 
 function getPasswordResetUrl(): string {
-  return getAppUrl("/forgot-password");
+  return Linking.createURL("/forgot-password");
 }
 
 interface AuthContextType {

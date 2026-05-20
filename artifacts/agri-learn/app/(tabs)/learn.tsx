@@ -205,7 +205,17 @@ export default function LearnScreen() {
                   </View>
                   <Text style={styles.moduleTitle}>{mod.title}</Text>
                   <Text style={styles.moduleDesc} numberOfLines={2}>{mod.description}</Text>
-                  <Text style={styles.moduleCat}>{mod.category}</Text>
+                  <View style={styles.moduleFooterRow}>
+                    <Text style={styles.moduleCat}>{mod.category}</Text>
+                    {mod.created_at ? (
+                      <View style={styles.publishedRow}>
+                        <Feather name="calendar" size={11} color={C.textTertiary} />
+                        <Text style={styles.publishedText}>
+                          {new Date(mod.created_at).toLocaleDateString("en-ZA", { day: "numeric", month: "short", year: "numeric" })}
+                        </Text>
+                      </View>
+                    ) : null}
+                  </View>
                 </View>
               </View>
               <Feather name="chevron-right" size={20} color={C.textTertiary} />
@@ -277,7 +287,10 @@ const styles = StyleSheet.create({
   durationText: { fontSize: 12, color: C.textSecondary, fontFamily: "Inter_400Regular" },
   moduleTitle: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: C.text, marginBottom: 3 },
   moduleDesc: { fontSize: 13, fontFamily: "Inter_400Regular", color: C.textSecondary, lineHeight: 18, marginBottom: 4 },
+  moduleFooterRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 2 },
   moduleCat: { fontSize: 12, fontFamily: "Inter_500Medium", color: C.primaryLight },
+  publishedRow: { flexDirection: "row", alignItems: "center", gap: 3 },
+  publishedText: { fontSize: 11, fontFamily: "Inter_400Regular", color: C.textTertiary },
   deniedContainer: {
     flex: 1,
     backgroundColor: C.background,

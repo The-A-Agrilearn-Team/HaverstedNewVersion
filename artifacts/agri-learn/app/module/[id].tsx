@@ -284,6 +284,14 @@ export default function ModuleDetailScreen() {
             </View>
             <Text style={styles.heroTitle}>{mod.title}</Text>
             <Text style={styles.heroDesc}>{mod.description}</Text>
+            {mod.created_at ? (
+              <View style={styles.publishedRow}>
+                <Feather name="calendar" size={12} color={C.textTertiary} />
+                <Text style={styles.publishedText}>
+                  Published {new Date(mod.created_at).toLocaleDateString("en-ZA", { day: "numeric", month: "long", year: "numeric" })}
+                </Text>
+              </View>
+            ) : null}
           </View>
 
           {aiOpen && (
@@ -621,6 +629,8 @@ const styles = StyleSheet.create({
   metaChipText: { fontSize: 13, fontFamily: "Inter_400Regular", color: C.textSecondary },
   heroTitle: { fontSize: 24, fontFamily: "Inter_700Bold", color: C.text, lineHeight: 32 },
   heroDesc: { fontSize: 15, fontFamily: "Inter_400Regular", color: C.textSecondary, lineHeight: 22 },
+  publishedRow: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 8 },
+  publishedText: { fontSize: 12, fontFamily: "Inter_400Regular", color: C.textTertiary },
 
   aiPanel: {
     marginHorizontal: 20,

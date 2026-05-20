@@ -164,21 +164,10 @@ export default function ProfileScreen() {
           <Text style={styles.sectionLabel}>Learning</Text>
           <View style={styles.menuGroup}>
             <MenuRow
-              icon="bookmark"
-              label="Saved Modules"
-              badge={stats.bookmarks > 0 ? String(stats.bookmarks) : undefined}
-              onPress={() => router.push("/profile/saved-modules" as any)}
-            />
-            <MenuRow
               icon="award"
               label="My Progress"
               badge={stats.completed > 0 ? `${stats.completed} done` : undefined}
               onPress={() => router.push("/profile/my-progress" as any)}
-            />
-            <MenuRow
-              icon="download"
-              label="Offline Content"
-              onPress={() => router.push("/profile/offline-content" as any)}
               last
             />
           </View>
