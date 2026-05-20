@@ -259,6 +259,14 @@ export default function MarketScreen() {
                       <Text style={[styles.metaText, { color: C.primary }]}>Photo</Text>
                     </View>
                   )}
+                  {item.created_at ? (
+                    <View style={styles.metaChip}>
+                      <Feather name="calendar" size={11} color={C.textTertiary} />
+                      <Text style={[styles.metaText, { color: C.textTertiary }]}>
+                        {new Date(item.created_at).toLocaleDateString("en-ZA", { day: "numeric", month: "short", year: "numeric" })}
+                      </Text>
+                    </View>
+                  ) : null}
                 </View>
               </View>
             </Pressable>

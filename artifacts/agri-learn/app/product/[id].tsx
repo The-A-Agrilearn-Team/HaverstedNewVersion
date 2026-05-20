@@ -198,6 +198,17 @@ export default function ProductDetailScreen() {
                 <Text style={styles.infoValue}>{item.location}</Text>
               </View>
             </View>
+            {item.created_at ? (
+              <View style={styles.infoItem}>
+                <Feather name="calendar" size={16} color={C.primary} />
+                <View>
+                  <Text style={styles.infoLabel}>Listed on</Text>
+                  <Text style={styles.infoValue}>
+                    {new Date(item.created_at).toLocaleDateString("en-ZA", { day: "numeric", month: "long", year: "numeric" })}
+                  </Text>
+                </View>
+              </View>
+            ) : null}
           </View>
 
           <View style={styles.divider} />
