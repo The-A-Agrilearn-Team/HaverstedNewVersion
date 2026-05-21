@@ -24,7 +24,7 @@
     "**/*.tsx",
     ".expo/types/**/*.ts",
     "expo-env.d.ts"
-  ],
+, "stubs/empty-module.js"  ],
   "references": [
     {
       "path": "../../lib/api-client-react"

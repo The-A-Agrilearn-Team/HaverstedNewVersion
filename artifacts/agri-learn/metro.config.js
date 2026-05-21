@@ -26,7 +26,19 @@ const DEDUPE = [
   "@react-navigation/elements",
 ];
 
+// @opentelemetry packages use dynamic import() with variable expressions
+// which Metro bundler cannot resolve at build time. Stub them out with
+// an empty module so the Supabase optional telemetry path is a no-op.
+const STUB_PREFIXES = ["@opentelemetry/"];
+
+const EMPTY_MODULE = path.resolve(__dirname, "stubs/empty-module.js");
+
 config.resolver.resolveRequest = (context, moduleName, platform) => {
+  // Stub out any OpenTelemetry package
+  if (STUB_PREFIXES.some((prefix) => moduleName.startsWith(prefix))) {
+    return { type: "sourceFile", filePath: EMPTY_MODULE };
+  }
+
   const base = moduleName.split("/")[0];
   const scopedBase = moduleName.startsWith("@")
     ? moduleName.split("/").slice(0, 2).join("/")

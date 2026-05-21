@@ -4,6 +4,9 @@
       "eas": {
         "projectId": "2267f094-4cab-48f7-98fe-745a96415969"
       }
+    },
+    "android": {
+      "package": "com.mmeli.workspace"
     }
   }
 }

@@ -1,0 +1,51 @@
+[33m4f25a1e[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m HEAD@{0}: pull: Fast-forward
+[33m8b0538c[m HEAD@{1}: reset: moving to HEAD
+[33m8b0538c[m HEAD@{2}: checkout: moving from main to main
+[33m8b0538c[m HEAD@{3}: pull: Fast-forward
+[33m44a8370[m[33m ([m[1;31morigin/44-suspend-user-accounts-admin-feature[m[33m)[m HEAD@{4}: commit: Remove expo@55 from root to fix duplicate navigation packages
+[33m084d629[m HEAD@{5}: commit: Newwer updates
+[33m54c20fb[m HEAD@{6}: commit: fix: remove iOS-only and unstable imports from tab layout (crash fix)
+[33meae4908[m HEAD@{7}: commit: debug: show error message on crash screen
+[33mc2bcdac[m HEAD@{8}: commit: fix: re-enable newArch (required by reanimated 4), bump versionCode to 3
+[33madcc0e4[m HEAD@{9}: commit: fix: update lockfile after removing langchain from agri-learn deps
+[33m1d7fa97[m HEAD@{10}: commit: fix: remove invalid npmClient from eas.json
+[33m7025130[m HEAD@{11}: commit: fix: tell EAS to use pnpm as package manager
+[33md2606af[m HEAD@{12}: commit: fix: disable newArch, add EAS project ID, fix API URL
+[33ma8cf2a5[m HEAD@{13}: commit: fix: bind to 0.0.0.0 and add root health route
+[33m6bd77ca[m HEAD@{14}: commit: fix: add Render build script to handle esbuild native binary
+[33ma6a342a[m HEAD@{15}: pull origin main: Merge made by the 'ort' strategy.
+[33m38763a8[m HEAD@{16}: reset: moving to HEAD
+[33m38763a8[m HEAD@{17}: commit: fix: allow esbuild build scripts in pnpm via .npmrc
+[33m2dbbfb6[m HEAD@{18}: commit: Ready for deployment
+[33m6a17ce0[m HEAD@{19}: pull: Fast-forward
+[33m0537cbb[m HEAD@{20}: pull: Fast-forward
+[33m3b7ad96[m HEAD@{21}: commit: fix ai search + backend updates
+[33m0ccb593[m HEAD@{22}: commit (merge): My local changes before pulling
+[33meee696e[m HEAD@{23}: commit: My local changes before pulling
+[33m0501a67[m HEAD@{24}: pull: Fast-forward
+[33m119beac[m HEAD@{25}: pull: Fast-forward
+[33maea0124[m HEAD@{26}: pull: Fast-forward
+[33m1b2445c[m HEAD@{27}: pull: Fast-forward
+[33m88953d6[m HEAD@{28}: pull: Fast-forward
+[33m4c778fb[m HEAD@{29}: commit (merge): Resolve auth merge conflicts
+[33m687fc89[m HEAD@{30}: reset: moving to HEAD
+[33m687fc89[m HEAD@{31}: checkout: moving from 4-service-window-feature to main
+[33m6a275bd[m[33m ([m[1;31morigin/4-service-window-feature[m[33m, [m[1;32m4-service-window-feature[m[33m)[m HEAD@{32}: pull origin main: Fast-forward
+[33m9798ad5[m HEAD@{33}: commit: Add service window search and AI service hooks
+[33m7353b3c[m HEAD@{34}: checkout: moving from main to 4-service-window-feature
+[33m687fc89[m HEAD@{35}: commit (merge): Resolved merge conflict
+[33m448a840[m[33m ([m[1;32mfeature/layout-update[m[33m)[m HEAD@{36}: Branch: renamed refs/heads/fix/auth-updates to refs/heads/main
+[33m448a840[m[33m ([m[1;32mfeature/layout-update[m[33m)[m HEAD@{38}: checkout: moving from feature/layout-update to fix/auth-updates
+[33m448a840[m[33m ([m[1;32mfeature/layout-update[m[33m)[m HEAD@{39}: checkout: moving from main to feature/layout-update
+[33mad014a2[m HEAD@{40}: checkout: moving from feature/layout-update to main
+[33m448a840[m[33m ([m[1;32mfeature/layout-update[m[33m)[m HEAD@{41}: commit (merge): Updated authentication errors, email confirmation messages have been updated
+[33mad014a2[m HEAD@{42}: checkout: moving from main to feature/layout-update
+[33mad014a2[m HEAD@{43}: checkout: moving from feature/layout-update to main
+[33mad014a2[m HEAD@{44}: checkout: moving from main to feature/layout-update
+[33mad014a2[m HEAD@{45}: commit: Updated features / fixed bugs
+[33m5e26127[m HEAD@{46}: Branch: renamed refs/heads/main to refs/heads/main
+[33m5e26127[m HEAD@{48}: Branch: renamed refs/heads/main to refs/heads/main
+[33m5e26127[m HEAD@{50}: commit: Initial commit
+[33m6d85e4d[m[33m ([m[1;31mgitsafe-backup/main[m[33m)[m HEAD@{51}: commit: Adapt project for cross-platform compatibility and local Windows execution
+[33ma292c97[m[33m ([m[1;34mgrafted[m[33m)[m HEAD@{52}: checkout: moving from main to main
+[33ma292c97[m[33m ([m[1;34mgrafted[m[33m)[m HEAD@{53}: branch: Created from origin/main

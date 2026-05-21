@@ -16,6 +16,11 @@
   },
   "packageManager": "pnpm@10.26.1",
   "pnpm": {
-    "onlyBuiltDependencies": ["@swc/core", "esbuild", "msw", "unrs-resolver"]
+    "onlyBuiltDependencies": ["@swc/core", "esbuild", "msw", "unrs-resolver"],
+    "overrides": {
+      "react": "19.1.0",
+      "react-dom": "19.1.0",
+      "expo-constants": "18.0.13"
+    }
   }
 }
