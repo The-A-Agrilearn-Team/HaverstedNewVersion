@@ -17,7 +17,7 @@ import { useAuth } from "@/context/AuthContext";
 import Colors from "@/constants/colors";
 import { useFeaturedModules, useModules } from "@/hooks/useModules";
 import { useRecentListings } from "@/hooks/useListings";
-import { useUnreadCount } from "@/hooks/useNotifications";
+
 import { useProgress, type Progress } from "@/hooks/useProgress";
 
 const C = Colors.light;
@@ -44,7 +44,7 @@ export default function HomeScreen() {
   const { data: modules = [], isLoading: modulesLoading, refetch: refetchModules } = useFeaturedModules();
   const { data: allModules = [] } = useModules();
   const { data: listings = [], isLoading: listingsLoading, refetch: refetchListings } = useRecentListings();
-  const { data: unreadCount = 0 } = useUnreadCount();
+  
   const { data: progressData } = useProgress();
 
   const inProgressModules = React.useMemo(() => {
@@ -109,11 +109,7 @@ export default function HomeScreen() {
             }}
           >
             <Feather name="bell" size={20} color={C.text} />
-            {unreadCount > 0 && (
-              <View style={styles.notifDot}>
-                <Text style={styles.notifDotText}>{unreadCount > 9 ? "9+" : unreadCount}</Text>
-              </View>
-            )}
+            
           </Pressable>
           {user && (
             <Pressable

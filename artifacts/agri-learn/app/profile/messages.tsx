@@ -14,7 +14,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Colors from "@/constants/colors";
 import { useAuth } from "@/context/AuthContext";
-import { useConversations, useUnreadCount } from "@/hooks/useNotifications";
+
 
 const C = Colors.light;
 
@@ -34,27 +34,11 @@ export default function MessagesScreen() {
   const insets = useSafeAreaInsets();
   const { user, profile } = useAuth();
 
-  const { data: conversations = [], isLoading, refetch } = useConversations();
-  const { data: totalUnread = 0 } = useUnreadCount();
 
-  useFocusEffect(
-    useCallback(() => {
-      refetch();
-    }, [])
-  );
 
-  const openChat = (conv: typeof conversations[number]) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    router.push({
-      pathname: "/profile/chat" as any,
-      params: {
-        listingId: conv.listingId ?? "",
-        otherId: conv.otherUserId,
-        otherName: conv.otherName,
-        listingTitle: conv.listingTitle,
-      },
-    });
-  };
+  
+
+  
 
   const initials = (name: string) =>
     name
@@ -73,104 +57,17 @@ export default function MessagesScreen() {
         </Pressable>
         <View style={styles.navCenter}>
           <Text style={styles.navTitle}>Messages</Text>
-          {totalUnread > 0 && (
-            <View style={styles.navBadge}>
-              <Text style={styles.navBadgeText}>{totalUnread > 99 ? "99+" : totalUnread}</Text>
-            </View>
-          )}
+          
         </View>
         <View style={styles.navBtn} />
       </View>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={isLoading} onRefresh={refetch} tintColor={C.primary} />
-        }
+        
         contentContainerStyle={{ paddingBottom: insets.bottom + 60 }}
       >
-        {isLoading ? (
-          <ActivityIndicator color={C.primary} style={{ paddingTop: 80 }} />
-        ) : conversations.length === 0 ? (
-          <View style={styles.empty}>
-            <View style={styles.emptyIcon}>
-              <Feather name="message-circle" size={36} color={C.textTertiary} />
-            </View>
-            <Text style={styles.emptyTitle}>No conversations yet</Text>
-            <Text style={styles.emptySub}>
-              {profile?.role === "farmer"
-                ? "When buyers contact you about your listings, conversations will appear here."
-                : "Browse the marketplace and tap \"Contact Seller\" on a listing to start a conversation."}
-            </Text>
-            <Pressable
-              style={styles.ctaBtn}
-              onPress={() => router.replace("/(tabs)/market")}
-            >
-              <Feather name="shopping-bag" size={15} color={C.primary} />
-              <Text style={styles.ctaBtnText}>Go to Marketplace</Text>
-            </Pressable>
-          </View>
-        ) : (
-          <View style={styles.list}>
-            {conversations.map((conv) => {
-              const isLastMine = conv.lastMessageSenderId === user?.id;
-              const preview = (isLastMine ? "You: " : "") + (conv.lastMessageText.length > 60 ? conv.lastMessageText.slice(0, 60) + "…" : conv.lastMessageText);
-
-              return (
-                <Pressable
-                  key={conv.threadKey}
-                  style={({ pressed }) => [
-                    styles.threadCard,
-                    conv.unreadCount > 0 && styles.threadCardUnread,
-                    { opacity: pressed ? 0.93 : 1 },
-                  ]}
-                  onPress={() => openChat(conv)}
-                >
-                  <View style={styles.avatar}>
-                    <Text style={styles.avatarText}>{initials(conv.otherName)}</Text>
-                    {conv.unreadCount > 0 && (
-                      <View style={styles.unreadDot}>
-                        <Text style={styles.unreadDotText}>
-                          {conv.unreadCount > 9 ? "9+" : conv.unreadCount}
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-
-                  <View style={{ flex: 1, gap: 4 }}>
-                    <View style={styles.threadTop}>
-                      <Text
-                        style={[styles.threadName, conv.unreadCount > 0 && styles.threadNameBold]}
-                        numberOfLines={1}
-                      >
-                        {conv.otherName}
-                      </Text>
-                      <Text style={styles.threadTime}>{timeAgo(conv.lastMessageTime)}</Text>
-                    </View>
-
-                    {!!conv.listingTitle && (
-                      <View style={styles.listingTag}>
-                        <Feather name="package" size={10} color={C.primary} />
-                        <Text style={styles.listingTagText} numberOfLines={1}>
-                          {conv.listingTitle}
-                        </Text>
-                      </View>
-                    )}
-
-                    <Text
-                      style={[styles.threadPreview, conv.unreadCount > 0 && styles.threadPreviewBold]}
-                      numberOfLines={1}
-                    >
-                      {preview}
-                    </Text>
-                  </View>
-
-                  <Feather name="chevron-right" size={16} color={C.textTertiary} style={{ flexShrink: 0 }} />
-                </Pressable>
-              );
-            })}
-          </View>
-        )}
+        
       </ScrollView>
     </View>
   );

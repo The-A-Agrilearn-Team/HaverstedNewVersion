@@ -18,13 +18,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Colors from "@/constants/colors";
 import { useAuth } from "@/context/AuthContext";
-import {
-  useConversationMessages,
-  useSendChatMessage,
-  useSendRawMessage,
-  useUpdateOfferStatus,
-  ChatMessage,
-} from "@/hooks/useNotifications";
+
 import { useCreateOrder } from "@/hooks/useOrders";
 import { useMarkAsSold } from "@/hooks/useListings";
 import { sendPushToUser } from "@/lib/push-notification";
@@ -71,7 +65,7 @@ function OfferCard({
   accepting,
   declining,
 }: {
-  msg: ChatMessage;
+  
   isMe: boolean;
   isFarmer: boolean;
   onAccept: () => void;
@@ -184,18 +178,11 @@ export default function ChatScreen() {
   const [decliningId,    setDecliningId]    = useState<string | null>(null);
   const scrollRef = useRef<ScrollView>(null);
 
-  const { data: messages = [], isLoading } = useConversationMessages(listingId, otherId);
-  const sendMessage       = useSendChatMessage();
-  const sendRawMessage    = useSendRawMessage();
-  const updateOfferStatus = useUpdateOfferStatus();
+  
   const createOrder       = useCreateOrder();
   const markAsSold        = useMarkAsSold();
 
-  useEffect(() => {
-    if (messages.length > 0) {
-      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
-    }
-  }, [messages.length]);
+ 
 
   const handleSend = async () => {
     const trimmed = text.trim();
@@ -208,13 +195,7 @@ export default function ChatScreen() {
 
     setText("");
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    try {
-      await sendMessage.mutateAsync({ receiverId: otherId, listingId, text: trimmed });
-      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 150);
-    } catch (err: any) {
-      setText(trimmed);
-      Alert.alert("Send Failed", err?.message ?? "Could not send message. Please try again.");
-    }
+    
   };
 
   const handleSendOffer = async () => {
@@ -242,7 +223,7 @@ export default function ChatScreen() {
         status: "pending",
         buyer_name: profile?.full_name ?? user?.email ?? "A buyer",
       });
-      await sendRawMessage.mutateAsync({ receiverId: otherId, listingId, rawContent });
+      
       setOfferQty("");
       setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 150);
       sendPushToUser(

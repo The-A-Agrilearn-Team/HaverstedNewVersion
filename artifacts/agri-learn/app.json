@@ -13,7 +13,9 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-    "ios": { "supportsTablet": false },
+    "ios": {
+      "supportsTablet": false
+    },
     "android": {
       "package": "com.agrilearn.app",
       "versionCode": 9,
@@ -26,10 +28,13 @@
         "android.permission.WRITE_EXTERNAL_STORAGE",
         "android.permission.READ_MEDIA_IMAGES",
         "android.permission.VIBRATE",
-        "android.permission.RECEIVE_BOOT_COMPLETED"
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.RECORD_AUDIO"
       ]
     },
-    "web": { "favicon": "./assets/images/icon.png" },
+    "web": {
+      "favicon": "./assets/images/icon.png"
+    },
     "plugins": [
       "expo-font",
       "expo-web-browser",
@@ -37,14 +42,6 @@
         "expo-image-picker",
         {
           "photosPermission": "AgriHub needs access to your photos to upload harvest images for listings."
-        }
-      ],
-      [
-        "expo-notifications",
-        {
-          "icon": "./assets/images/icon.png",
-          "color": "#2D6A4F",
-          "androidMode": "default"
         }
       ]
     ],
@@ -54,8 +51,9 @@
     },
     "extra": {
       "eas": {
-        "projectId": "e8abcf30-fd9c-4c6d-abb1-0f586075d04d"
+        "projectId": "a5815168-16b7-4afb-8e6e-bd7e2df9786f"
       }
-    }
+    },
+    "owner": "mayandeni"
   }
 }

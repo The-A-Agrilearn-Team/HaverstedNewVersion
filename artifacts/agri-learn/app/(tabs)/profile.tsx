@@ -17,7 +17,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "@/context/AuthContext";
 import Colors from "@/constants/colors";
 import { useProfileStats } from "@/hooks/useProgress";
-import { useUnreadCount } from "@/hooks/useNotifications";
+
 
 const C = Colors.light;
 
@@ -33,7 +33,7 @@ export default function ProfileScreen() {
   );
 
   const { data: stats = { completed: 0, bookmarks: 0, listings: 0 } } = useProfileStats();
-  const { data: unreadMessages = 0 } = useUnreadCount();
+  
 
   const handleSignOut = () => {
     if (Platform.OS === "web") {
@@ -183,7 +183,7 @@ export default function ProfileScreen() {
               <MenuRow
                 icon="message-circle"
                 label="Messages"
-                badge={unreadMessages > 0 ? String(unreadMessages) : undefined}
+                
                 onPress={() => router.push("/profile/messages" as any)}
               />
               <MenuRow
@@ -204,7 +204,7 @@ export default function ProfileScreen() {
               <MenuRow
                 icon="message-circle"
                 label="Messages"
-                badge={unreadMessages > 0 ? String(unreadMessages) : undefined}
+                
                 onPress={() => router.push("/profile/messages" as any)}
               />
               <MenuRow
