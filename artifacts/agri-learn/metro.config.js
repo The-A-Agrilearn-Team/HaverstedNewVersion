@@ -26,15 +26,64 @@ const DEDUPE = [
   "@react-navigation/elements",
 ];
 
-// @opentelemetry packages use dynamic import() with variable expressions
-// which Metro bundler cannot resolve at build time. Stub them out with
-// an empty module so the Supabase optional telemetry path is a no-op.
-const STUB_PREFIXES = ["@opentelemetry/"];
+// Packages that contain Node.js-only code and must be stubbed for Hermes/RN.
+// - @opentelemetry/*: optional telemetry in @supabase/supabase-js (variable dynamic imports)
+// - ws / bufferutil / utf-8-validate: Node.js WebSocket used by @supabase/realtime-js
+// - node:* built-ins that ws transitively requires (net, tls, fs, etc.)
+const STUB_EXACT = new Set([
+  "ws",
+  "bufferutil",
+  "utf-8-validate",
+  // Node built-ins that ws / realtime pulls in
+  "net",
+  "tls",
+  "fs",
+  "http",
+  "https",
+  "zlib",
+  "stream",
+  "crypto",
+  "os",
+  "path",
+  "url",
+  "util",
+  "events",
+  "assert",
+  "buffer",
+  "querystring",
+  "string_decoder",
+  "timers",
+  "child_process",
+  "cluster",
+  "dgram",
+  "dns",
+  "domain",
+  "module",
+  "perf_hooks",
+  "process",
+  "readline",
+  "repl",
+  "tty",
+  "v8",
+  "vm",
+  "worker_threads",
+]);
+
+// Prefix-based stubs (any module starting with these strings)
+const STUB_PREFIXES = [
+  "@opentelemetry/",
+  "node:",  // node:fs, node:crypto, node:stream, etc.
+];
 
 const EMPTY_MODULE = path.resolve(__dirname, "stubs/empty-module.js");
 
 config.resolver.resolveRequest = (context, moduleName, platform) => {
-  // Stub out any OpenTelemetry package
+  // Stub out exact module names
+  if (STUB_EXACT.has(moduleName)) {
+    return { type: "sourceFile", filePath: EMPTY_MODULE };
+  }
+
+  // Stub out prefix-matched modules
   if (STUB_PREFIXES.some((prefix) => moduleName.startsWith(prefix))) {
     return { type: "sourceFile", filePath: EMPTY_MODULE };
   }
