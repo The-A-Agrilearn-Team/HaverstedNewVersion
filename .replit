@@ -38,8 +38,9 @@ args = "pnpm --filter @workspace/agri-learn run dev"
 outputType = "console"
 
 [agent]
-stack = "PNPM_WORKSPACE"
+stack = "BEST_EFFORT_FALLBACK"
 expertMode = true
+integrations = ["javascript_openai_ai_integrations:2.0.0"]
 
 [postMerge]
 path = "scripts/post-merge.sh"
@@ -50,3 +51,6 @@ timeoutMs = 20000
 [userenv.shared]
 EXPO_PUBLIC_SUPABASE_URL = "https://quxdfknwgymgghemkmcd.supabase.co"
 EXPO_PUBLIC_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF1eGRma253Z3ltZ2doZW1rbWNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwNzk2NTUsImV4cCI6MjA4OTY1NTY1NX0.F0Jt5ISnkKh9tigNS-R-4hqj2aiZLcC_h6VjY6fUTGQ"
+
+[nix]
+channel = "stable-25_05"
